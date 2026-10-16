@@ -1221,8 +1221,18 @@ const Recap = {
     const water = days.reduce((s, d) => s + Store.count('water:' + d), 0);
     const money = Store.list('money').filter(x => inWeek(x.date));
     const spend = money.filter(x => x.type !== 'in').reduce((s, x) => s + (+x.amount || 0), 0);
-    const done  = Store.list('work').filter(x => x.done && inWeek(x.date)).length;
     const moods = Store.list('mood').filter(x => inWeek(x.date)).length;
+
+    /* 「完成的事情」= 工作清单里打勾的 + 计划型项目里勾掉的。
+       计划那条没有 date 字段，用「最后一次改动时间」判断是不是落在这一周；
+       条目被删掉的不算（勾完又删，不该还挂在成绩单上）。 */
+    const w0 = new Date(days[0] + 'T00:00:00').getTime();
+    const w1 = new Date(days[6] + 'T23:59:59.999').getTime();
+    const alive = new Set(Store.list('planItem').map(x => x.id)
+      .concat(Store.list('planSub').map(x => x.id)));
+    const planDone = Store.list('planDone')
+      .filter(x => x.done && (x._u || 0) >= w0 && (x._u || 0) <= w1 && alive.has(x.id)).length;
+    const done  = Store.list('work').filter(x => x.done && inWeek(x.date)).length + planDone;
 
     // 连续记录天数：从今天往回数，哪天有记录就继续，断了就停在断的那天
     const pool = [].concat(Store.list('study'), Store.list('work'), Store.list('mood'));
