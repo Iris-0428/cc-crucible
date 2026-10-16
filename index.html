@@ -253,6 +253,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 @media (min-width:1700px){
   .main > .page.on{max-width:1400px;margin:0 auto}
 }
+
+/* ==== 面试冲刺 ==== */
+.ivGrp{font-size:12px;color:var(--text-dim);margin:16px 0 2px;letter-spacing:.08em}
+.item.ivSub{margin-left:24px;font-size:.93em;border-bottom-style:none;padding:7px 0}
+#ivOut{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);line-height:1.8}
 </style>
 </head>
 <body>
@@ -290,6 +295,28 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </div>
     </section>
     <!-- ==== 功能：工作 END ==== -->
+
+    <!-- ==== 功能：面试冲刺 START ==== -->
+    <section class="page" id="page-interview">
+      <div class="page-title">面试冲刺</div>
+      <div class="page-sub">四天计划，打开只看当天</div>
+      <div class="card wide">
+        <div class="hero" id="ivNum">Day 1<span class="unit">/ 4 天</span></div>
+        <p class="hint" id="ivSub"></p>
+        <div class="chips" id="ivChips"></div>
+        <div id="ivBody"></div>
+        <div class="hint" id="ivOut"></div>
+        <details style="margin-top:18px">
+          <summary class="hint" style="cursor:pointer">第 1 天不是今天？点这里改</summary>
+          <div class="row" style="margin-top:10px">
+            <input type="date" id="ivStart">
+            <button class="btn ghost" onclick="Interview.setStart()">设为首日</button>
+          </div>
+          <p class="hint">改完刷新一下，页面会自动对上「今天该看哪天」。</p>
+        </details>
+      </div>
+    </section>
+    <!-- ==== 功能：面试冲刺 END ==== -->
 
     <!-- ==== 功能：记账 START ==== -->
     <section class="page" id="page-money">
@@ -810,6 +837,7 @@ const UI = {
 const App = {
   routes: [
     { id:'work',      icon:'💼', name:'工作',   onShow: () => Work.render()      },
+    { id:'interview', icon:'🎤', name:'面试',   onShow: () => Interview.render() },
     { id:'money',     icon:'💰', name:'记账',   onShow: () => Money.render()     },
     { id:'weight',    icon:'⚖️', name:'体重',   onShow: () => Weight.render()    },
     { id:'study',     icon:'📚', name:'学习',   onShow: () => Study.render()     },
@@ -1259,6 +1287,209 @@ const Work = {
   del(id){ Store.softDelete('work', id); this.render(); }
 };
 /* ==== 功能：工作 END ==== */
+
+/* ==== 功能：面试冲刺 START ==== */
+/* 四天计划内置在这里。i 里每条：字符串 = 一条任务；{t,s:[...]} = 一条带子项。
+   勾选状态按固定 id（d2b0i1 这种）存进 planDone，跨设备能正确合并。 */
+const Interview = {
+  PLAN: [
+    { d:1, title:'打地基 + 自我介绍 + 概念方法论',
+      out:'自我介绍定稿 + 财经红线清单',
+      b:[
+        { t:'上午 1.5h', i:[
+          '背岗位本质：算法之前的「质量闸门」——准确是底线，风险分级决定审核强度。',
+          '写 1 分钟和 3 分钟自我介绍，突出：财经敏感度 + 内容判断 + 数据/规则思维。'
+        ]},
+        { t:'下午 2h', i:[
+          '概念题：硬新闻 vs 软新闻、时效 vs 准确、泛知识研判价值。',
+          '方法论：内容质量四维——信源权威性、数据可验证性、观点合理性、表达规范性。',
+          'UGC 风险：冒充专业 + 诱导投资，识别靠关键词 + 资质 + 举报聚类。'
+        ]},
+        { t:'晚上 1h', i:[
+          '每个题用自己的话讲 1 分钟，录音回听。',
+          { t:'整理财经红线 10 条（下面 7 条打底，自己再补 3 条）', s:[
+            '不得荐股',
+            '不得承诺收益',
+            '不得冒充持牌机构',
+            '不得曲解政策',
+            '不得数据造假',
+            '不得制造恐慌',
+            '不得标题党'
+          ]}
+        ]}
+      ]
+    },
+    { d:2, title:'字节产品 + 技术题 + 财经专项',
+      out:'3 个热点分析 + 技术题话术',
+      b:[
+        { t:'上午 2h', i:[
+          '字节财经内容特点：算法驱动、规模大、质量方差大。',
+          '研判与算法的关系：算法负责「推给谁」，研判负责「能不能推」。',
+          '技术题：AI 能筛不能判；NLP 做分类、实体识别、相似度检测；实时架构分层——毫秒规则、秒级模型、分钟级人工。'
+        ]},
+        { t:'下午 2h', i:[
+          '找 3 个财经热点（如降准、A股波动、美联储），每个都用同一套框架过一遍。',
+          { t:'每个热点统一走「定性 → 定级 → 方案」', s:[
+            '定性：资讯 / 解读 / 观点 / 教程？',
+            '定级：高风险 / 中风险 / 低风险？',
+            '方案：人工审核 / 限流 / 打标 / 算法放行？'
+          ]}
+        ]},
+        { t:'晚上 1h', i:[
+          '默写：质量四维、风险分级、AI 局限。',
+          { t:'自测：一条视频说「央行降准，房价要暴涨」，你怎么研判？', s:[
+            '定性：政策解读 + 预测',
+            '定级：高风险——信源非官方、观点绝对化、可能误导',
+            '方案：限流 + 人工复核 + 打标「观点仅供参考」'
+          ]}
+        ]}
+      ]
+    },
+    { d:3, title:'实操项目 + 行为面 + 模拟',
+      out:'2 个 STAR 故事 + 实操题回答模板',
+      b:[
+        { t:'上午 2h', i:[
+          { t:'写 2 个 STAR 故事，每个 200 字', s:[
+            '你识别过什么风险内容 / 问题？',
+            '你用什么方法提升了效率或准确率？',
+            '重点写：判断依据、方法、量化结果'
+          ]}
+        ]},
+        { t:'下午 2h', i:[
+          '练实操题：用户反馈低质量内容、内容分类体系、审核规则设计。',
+          '统一套路：定位问题 → 归因分析 → 分级处理 → 闭环验证。'
+        ]},
+        { t:'晚上 1.5h', i:[
+          '找朋友或自问自答，模拟面试 30 分钟。',
+          '录音，重点听：有没有先定性、再定级、最后给方案？有没有举例？'
+        ]}
+      ]
+    },
+    { d:4, title:'全真模拟 + 冲刺背诵 + 面试准备',
+      out:'',
+      b:[
+        { t:'上午 2h', i:[
+          '全流程模拟：自我介绍 → 项目 → 专业题 → 反问，连续 1 小时。',
+          '练「不会的题」：先定性，再定级，最后给处理思路。'
+        ]},
+        { t:'下午 2h', i:[
+          { t:'过精炼背诵版', s:[
+            '岗位本质：算法前的质量闸门，准确是底线，风险分级。',
+            '判断框架：信源、数据、观点、表达。',
+            '硬新闻看信源，软新闻看逻辑，时效让位准确。',
+            'UGC 风险：冒充专业 + 诱导投资。',
+            '字节：规模实时、质量方差大，研判输出质量分和标签。',
+            'AI 能筛不能判，人集中在「判」。',
+            '项目讲 STAR：判断依据、方法、量化。'
+          ]},
+          '准备 3 个反问：团队研判重点？财经最常遇风险？人工与算法怎么分工？'
+        ]},
+        { t:'晚上 1h', i:[
+          '轻量复述框架，早睡。'
+        ]}
+      ]
+    }
+  ],
+
+  cur: null,
+
+  /** 第 1 天是哪天（时间戳）。首次打开自动记为今天，可在页面底部改 */
+  start(){
+    let s = Store.get('ivStart', 0);
+    if (!s) { s = Date.now(); Store.set('ivStart', s); }
+    return s;
+  },
+
+  /** 今天该看第几天 */
+  todayDay(){
+    const a = new Date(this.start()); a.setHours(0, 0, 0, 0);
+    const b = new Date();             b.setHours(0, 0, 0, 0);
+    const n = Math.round((b - a) / 864e5) + 1;
+    return Math.min(4, Math.max(1, n));
+  },
+
+  dayState(d){ const t = this.todayDay(); return d === t ? 'today' : (d < t ? 'past' : 'future'); },
+
+  /** 某天全部条目 id（含子项） */
+  ids(day){
+    const pd = this.PLAN.find(x => x.d === day);
+    if (!pd) return [];
+    const out = [];
+    pd.b.forEach((blk, bi) => blk.i.forEach((it, ii) => {
+      const base = 'd' + day + 'b' + bi + 'i' + ii;
+      out.push(base);
+      if (typeof it === 'object' && it.s) it.s.forEach((_, si) => out.push(base + 's' + si));
+    }));
+    return out;
+  },
+
+  isDone(id){
+    const r = Store.list('planDone').find(x => x.id === id);
+    return !!(r && r.done);
+  },
+
+  toggle(id){ Store.upsert('planDone', { id, done: !this.isDone(id) }); this.render(); },
+
+  pick(d){ this.cur = d; this.render(); },
+
+  setStart(){
+    const v = document.getElementById('ivStart').value;
+    if (!v) return UI.toast('先选个日期');
+    const d = new Date(v + 'T00:00:00');
+    if (isNaN(d.getTime())) return UI.toast('日期不对');
+    Store.set('ivStart', d.getTime());
+    this.cur = null;
+    UI.toast('第 1 天已设为 ' + v);
+    this.render();
+  },
+
+  row(id, text, sub){
+    const on = this.isDone(id);
+    return `<div class="item${on ? ' done' : ''}${sub ? ' ivSub' : ''}" onclick="Interview.toggle('${id}')">
+        <span class="box">${on ? '✓' : ''}</span>
+        <span class="grow">${Util.esc(text)}</span>
+      </div>`;
+  },
+
+  render(){
+    const box = document.getElementById('ivBody');
+    if (!box) return;
+    const t   = this.todayDay();
+    const day = this.cur || t;
+    this.cur  = day;
+    const pd  = this.PLAN.find(x => x.d === day);
+    if (!pd) return;
+
+    document.getElementById('ivNum').innerHTML = 'Day ' + day + '<span class="unit">/ 4 天</span>';
+    document.getElementById('ivSub').textContent =
+      pd.title + (day === t ? '　·　就是今天' : (day < t ? '　·　已过去' : '　·　还没到'));
+
+    document.getElementById('ivChips').innerHTML = this.PLAN.map(x => {
+      const st = this.dayState(x.d);
+      return `<button class="chip${x.d === day ? ' on' : ''}" onclick="Interview.pick(${x.d})">${
+        st === 'today' ? '今天 Day ' + x.d : 'Day ' + x.d}</button>`;
+    }).join('');
+
+    box.innerHTML = pd.b.map((blk, bi) => {
+      const rows = blk.i.map((it, ii) => {
+        const base = 'd' + day + 'b' + bi + 'i' + ii;
+        if (typeof it === 'string') return this.row(base, it, false);
+        const subs = (it.s || []).map((s, si) => this.row(base + 's' + si, s, true)).join('');
+        return this.row(base, it.t, false) + subs;
+      }).join('');
+      return `<div class="ivGrp">${Util.esc(blk.t)}</div>${rows}`;
+    }).join('');
+
+    const all = this.ids(day), done = all.filter(id => this.isDone(id)).length;
+    document.getElementById('ivOut').innerHTML =
+      (pd.out ? 'Day ' + day + ' 产出：' + Util.esc(pd.out) + '<br>' : '') +
+      '完成进度 ' + done + ' / ' + all.length;
+
+    const si = document.getElementById('ivStart');
+    if (si) si.value = Util.dateOf(new Date(this.start()));
+  }
+};
+/* ==== 功能：面试冲刺 END ==== */
 /* ==== 功能：记账 START ==== */
 const Money = {
   cats: ['餐饮', '交通', '学习', '人情', '医疗', '其他'],
