@@ -74,9 +74,14 @@ body{
   overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .side::-webkit-scrollbar{display:none}
-.brand{text-align:center;margin-bottom:14px;flex-shrink:0}
+/* 品牌区现在是个按钮：点了进首页（首页不进侧边栏，省一个位置） */
+.brand{
+  display:block;width:100%;text-align:center;margin-bottom:14px;flex-shrink:0;
+  background:none;border:none;font-family:inherit;color:inherit;cursor:pointer;padding:0;
+}
 .brand .logo{font-size:26px;line-height:1}
-.brand .name{font-size:11px;color:var(--sidebar-text);opacity:.85;margin-top:4px;line-height:1.3;word-break:break-all}
+.brand .name{font-size:11px;color:var(--sidebar-text);opacity:.85;margin-top:4px;line-height:1.3;word-break:break-all;transition:color var(--dur) var(--ease)}
+.brand.on .name{color:var(--accent);opacity:1;font-weight:500}
 .nav{display:flex;flex-direction:column;gap:4px}
 .nav button{
   border:none;background:transparent;font-family:inherit;
@@ -254,13 +259,32 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
   .main > .page.on{max-width:1400px;margin:0 auto}
 }
 
-/* ==== 面试冲刺 ==== */
-.ivGrp{font-size:12px;color:var(--text-dim);margin:16px 0 2px;letter-spacing:.08em}
+/* ==== 计划型项目（按天推进） ==== */
+.ivGrp{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);margin:16px 0 2px;letter-spacing:.08em}
+.ivGrp .edIn{flex:1;letter-spacing:0}
 .item.ivSub{margin-left:24px;font-size:.93em;border-bottom-style:none;padding:7px 0}
-#ivOut{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);line-height:1.8}
+.item.ivSub .edIn{flex:1}
+/* 编辑模式下的输入框：虚线框，一眼能看出「这里是能改的」 */
+.edIn{flex:1;min-width:0;padding:7px 9px;font-size:15px;border-style:dashed}
+.edBox{display:flex;flex-direction:column;gap:8px;margin-top:14px;padding:12px;
+  border:1px dashed var(--accent);border-radius:calc(var(--radius) - 4px)}
+
+/* ==== 首页：九块功能砖 ==== */
+.homeGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+.hm{
+  display:flex;flex-direction:column;gap:3px;text-align:left;
+  font-family:inherit;color:var(--text);cursor:pointer;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:15px;
+  transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease);
+}
+.hm:active{transform:scale(.985)}
+.hmIco{font-size:21px;line-height:1.2}
+.hmName{font-size:15px;font-weight:500}
+.hmSum{font-size:12px;color:var(--text-dim);line-height:1.5}
 
 /* ==== 工作：项目墙 ==== */
-#workHome,#workSub,#workIv{display:flex;flex-direction:column;gap:var(--gap)}
+#workHome,#workSub{display:flex;flex-direction:column;gap:var(--gap)}
 #workProj{display:flex;flex-direction:column;gap:var(--gap)}
 .hide{display:none!important}
 
@@ -291,7 +315,7 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .pjAdd .btn{padding:9px 14px;font-size:14px}
 
 .wkHead{display:flex;flex-direction:column;gap:2px}
-.wkBar{display:flex;align-items:center;gap:8px}
+.wkBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;row-gap:6px}
 .wkBar .btn{padding:9px 14px;font-size:14px}
 .wkBar .sp{flex:1}
 
@@ -300,13 +324,16 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 
 @media (min-width:700px){
   .pjGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .homeGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (min-width:1100px){
   .pjGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
   .page.on > #workHome,
-  .page.on > #workSub{grid-column:1 / -1}
+  .page.on > #workSub,
+  .page.on > .homeGrid{grid-column:1 / -1}
   #workProj{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:start}
   #workProj > .wkHead{grid-column:1 / -1}
+  #workProj > .card.wide{grid-column:1 / -1}   /* 计划型项目那张大卡要和顶部条一样占满 */
 }
 </style>
 </head>
@@ -316,10 +343,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 
   <!-- ==== 侧边栏 START ==== -->
   <aside class="side">
-    <div class="brand">
-      <div class="logo">🍲</div>
-      <div class="name">CC的坩埚</div>
-    </div>
+    <!-- 这块整个是个按钮：点了进首页。首页不进侧边栏，省一个位置 -->
+    <button class="brand" id="brand" onclick="App.go('home')">
+      <span class="logo">🍲</span>
+      <span class="name">CC的坩埚</span>
+    </button>
     <nav class="nav" id="nav">
       <!-- 由 App.routes 自动渲染 -->
     </nav>
@@ -327,6 +355,14 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
   <!-- ==== 侧边栏 END ==== -->
 
   <main class="main" id="main">
+
+    <!-- ==== 功能：首页 START ==== -->
+    <section class="page" id="page-home">
+      <div class="page-title">CC的坩埚</div>
+      <div class="page-sub" id="homeSub"></div>
+      <div class="homeGrid" id="homeGrid"></div>
+    </section>
+    <!-- ==== 功能：首页 END ==== -->
 
     <!-- ==== 功能：工作 START ==== -->
     <section class="page" id="page-work">
@@ -338,36 +374,9 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
         <div class="pjGrid" id="workProjGrid"></div>
       </div>
 
-      <!-- 视图二：某个项目里面 -->
+      <!-- 视图二：某个项目里面（普通项目的清单，或计划型项目的按天计划） -->
       <div id="workSub" class="hide">
         <div id="workProj"></div>
-
-        <!-- ==== 功能：面试冲刺 START ==== -->
-        <div id="workIv" class="hide">
-          <div class="wkHead">
-            <div class="wkBar">
-              <button class="btn ghost" onclick="Work.home()">← 工作</button>
-            </div>
-            <div class="page-title" style="margin-top:14px">面试冲刺</div>
-            <div class="page-sub">四天计划，打开只看当天</div>
-          </div>
-          <div class="card wide">
-            <div class="hero" id="ivNum">Day 1<span class="unit">/ 4 天</span></div>
-            <p class="hint" id="ivSub"></p>
-            <div class="chips" id="ivChips"></div>
-            <div id="ivBody"></div>
-            <div class="hint" id="ivOut"></div>
-            <details style="margin-top:18px">
-              <summary class="hint" style="cursor:pointer">第 1 天不是今天？点这里改</summary>
-              <div class="row" style="margin-top:10px">
-                <input type="date" id="ivStart">
-                <button class="btn ghost" onclick="Interview.setStart()">设为首日</button>
-              </div>
-              <p class="hint">改完刷新一下，页面会自动对上「今天该看哪天」。</p>
-            </details>
-          </div>
-        </div>
-        <!-- ==== 功能：面试冲刺 END ==== -->
       </div>
 
     </section>
@@ -890,6 +899,9 @@ const UI = {
    每加一个功能，在 routes 里加一条，侧边栏自动就有了。
    ═══════════════════════════════════════════════════════════ */
 const App = {
+  /* 首页是个「不进侧边栏」的路由：点左上角品牌区进来，省一个侧边栏位置 */
+  HOME: { id:'home', onShow: () => Home.render() },
+
   routes: [
     { id:'work',      icon:'💼', name:'工作',   onShow: again => Work.render(!again) },
     { id:'money',     icon:'💰', name:'记账',   onShow: () => Money.render()     },
@@ -902,30 +914,35 @@ const App = {
     { id:'settings',  icon:'⚙️', name:'设置',   onShow: () => Settings.render()  }
   ],
 
+  route(id){ return this.routes.find(r => r.id === id) || (id === this.HOME.id ? this.HOME : null); },
+
   go(id){
     const prev = document.querySelector('.page.on')?.id;
     document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
     document.getElementById('page-' + id)?.classList.add('on');
     document.querySelectorAll('#nav button').forEach(b =>
       b.classList.toggle('on', b.dataset.id === id));
+    document.getElementById('brand')?.classList.toggle('on', id === this.HOME.id);
     document.getElementById('main').scrollTop = 0;
     Store.set('_lastPage', id);
     // 第二个参数 again=true 表示「本来就是这一页」（重绘），功能可以据此不重置内部视图
-    this.routes.find(r => r.id === id)?.onShow?.(prev === 'page-' + id);
+    this.route(id)?.onShow?.(prev === 'page-' + id);
   },
 
   init(){
     Store.migrate();          // 旧版数据补齐 id，无感升级
-    if (typeof Work !== 'undefined') Work.migrate();   // 工作页改成项目制，老条目归到「收件箱」
-    // 渲染侧边栏
+    if (typeof Work !== 'undefined'){
+      Work.migrate();         // 工作页改成项目制，老条目归到「收件箱」
+      Work.migratePlan();     // 内置的「面试冲刺」转成一个真实的计划型项目（一次性）
+    }
+    // 渲染侧边栏。首页不在里面 —— 点左上角那块品牌区进
     document.getElementById('nav').innerHTML = this.routes.map(r =>
       `<button data-id="${r.id}" onclick="App.go('${r.id}')">
          <span class="ico">${r.icon}</span>${r.name}
        </button>`).join('');
 
-    // 回到上次看的那一页
-    const last = Store.get('_lastPage');
-    this.go(this.routes.some(r => r.id === last) ? last : this.routes[0].id);
+    // 每次打开都落在首页：一进来就能看到九条线各自的状态
+    this.go(this.HOME.id);
 
     this.checkBackup();
     if (typeof Sync !== 'undefined') Sync.init();
@@ -936,7 +953,7 @@ const App = {
     const cur = document.querySelector('.page.on');
     if (!cur) return;
     const id = cur.id.replace('page-', '');
-    this.routes.find(r => r.id === id)?.onShow?.(true);
+    this.route(id)?.onShow?.(true);
   },
 
   // 用户永远不会主动点导出，所以要主动提醒
@@ -1306,15 +1323,26 @@ const Recap = {
 /* ==== 功能：周复盘 END ==== */
 
 /* ==== 功能：工作 START ====
-   项目制：一块砖 = 一个项目，点进去再分「跟进」和「交付」两类。
-   数据：workProj 存项目，work 存条目（带 proj / kind / done）。
-   kind：follow = 跟进，deliver = 交付。做完的沉底，不然一周后满屏都是勾。
-   「面试冲刺」是内置的一块砖（假的条目，不在 workProj 里），走 Interview 模块。 */
+   一块砖 = 一个项目。项目有两种形态，随时可切，数据都留着：
+     · 普通项目 —— 跟进 / 交付 两列清单
+     · 计划型项目 —— 按「天」推进，每天分上午 / 下午 / 晚上三块，带首日和进度
+
+   数据（全部逐条存，跨设备按条合并，不整包覆盖）：
+     workProj  项目      { name, type:'normal'|'plan', startDay }
+     work      普通条目  { proj, kind:'follow'|'deliver', done }
+     planDay   计划的天  { proj, order, title, out, labels[3] }
+     planItem  计划的任务 { proj, day, blk, text, order }
+     planSub   计划的子项 { proj, item, text, order }
+     planDone  勾选状态  { id = 条目 id, done }
+   勾选按「条目 id」存，所以两台设备各勾各的也能正确合并。 */
 const Work = {
   INBOX: 'pj_inbox',          // 老数据没项目可归时，统一落到这个「收件箱」
-  IV:    '__iv__',            // 内置「面试冲刺」的保留 id，真实项目不会撞
-  view:  'home',
-  cur:   null,
+  BLKS: ['上午', '下午', '晚上'],
+  view: 'home',               // home = 项目墙；proj = 项目内部
+  cur: null,
+  edit: false,                // 计划型项目：编辑模式
+  curDay: null,               // 计划型项目：当前看第几天
+  newType: 'normal',          // 新建项目时选的形态
 
   /* ── 老版本数据迁移：原来的 work 条目没有 proj，kind 是 task / follow ── */
   migrate(){
@@ -1339,20 +1367,61 @@ const Work = {
     return n;
   },
 
-  /* ── 视图 ── */
-  home(){ this.view = 'home'; this.cur = null; this.render(); },
-  open(id){ this.view = 'proj'; this.cur = id; this.render(); },
+  /* ── 一次性迁移：内置的「面试冲刺」转成一个真实的计划型项目 ──
+     条目 id 沿用旧的（d1b0i1 这种），所以原来勾过的进度一条不丢。
+     转完它就跟其它项目一样：能改名、能删、能自己改内容。 */
+  migratePlan(){
+    if (Store.get('_planMigrated')) return 0;
+    Store.set('_planMigrated', Date.now());
+    const PID = 'pj_interview';                  // 这个项目的固定 id
+    if (Store.list('workProj').some(p => p.name === '面试冲刺')) return 0;
+    Store.upsert('workProj', {
+      id: PID, name: '面试冲刺', type: 'plan',
+      startDay: Store.get('ivStart') || new Date(2026, 9, 16).getTime(),
+      createdAt: Date.now()
+    });
+    PLAN_SEED.forEach(d => {
+      const dayId = 'ivd' + d.d;
+      Store.upsert('planDay', {
+        id: dayId, proj: PID, order: d.d,
+        title: d.title, out: d.out || '', labels: d.b.map(b => b.t)
+      });
+      d.b.forEach((blk, bi) => blk.i.forEach((it, ii) => {
+        const base = 'd' + d.d + 'b' + bi + 'i' + ii;
+        const text = typeof it === 'string' ? it : it.t;
+        Store.upsert('planItem', { id: base, proj: PID, day: dayId, blk: bi, text, order: ii });
+        if (it && it.s) it.s.forEach((s, si) =>
+          Store.upsert('planSub', { id: base + 's' + si, proj: PID, item: base, text: s, order: si }));
+      }));
+    });
+    return 1;
+  },
 
-  /* ── 项目本身 ── */
+  /* ── 视图切换 ── */
+  home(){ this.view = 'home'; this.cur = null; this.edit = false; this.curDay = null; this.render(); },
+  open(id){ this.view = 'proj'; this.cur = id; this.edit = false; this.curDay = null; this.render(); },
+  toggleEdit(){ this.edit = !this.edit; this.renderProj(); },
+  pickDay(order){ this.curDay = order; this.renderProj(); },
+
+  pickNewType(t){
+    this.newType = t;
+    document.getElementById('newTypeNormal')?.classList.toggle('on', t === 'normal');
+    document.getElementById('newTypePlan')?.classList.toggle('on', t === 'plan');
+  },
+
+  /* ── 项目 ── */
   addProj(){
     const el = document.getElementById('workProjInput');
     if (!el) return;
     const name = (el.value || '').trim();
     if (!name) return UI.toast('先给项目起个名字');
-    Store.upsert('workProj', { name, createdAt: Date.now() });
+    const it = { name, type: this.newType, createdAt: Date.now() };
+    if (it.type === 'plan') it.startDay = Date.now();
+    const p = Store.upsert('workProj', it);
     el.value = '';
-    UI.toast('项目建好了，点它进去加内容');
-    this.render();
+    if (it.type === 'plan') this.addDay(p.id, true);   // 计划型先给一天，不然进去是空的
+    UI.toast(it.type === 'plan' ? '计划型项目建好了' : '项目建好了，进去加内容');
+    this.open(p.id);
   },
 
   renameProj(id){
@@ -1363,22 +1432,176 @@ const Work = {
     const name = v.trim();
     if (!name) return UI.toast('名字不能是空的');
     Store.upsert('workProj', { id, name });
-    this.render();
+    this.renderProj();
+  },
+
+  /** 切换形态。两种形态的数据分开存，所以切换不会丢任何东西 */
+  setType(id, type){
+    const p = Store.list('workProj').find(x => x.id === id);
+    if (!p || p.type === type) return;
+    const msg = type === 'plan'
+      ? '切换成计划型？\n\n原来的「跟进 / 交付」清单不会删，切回普通项目还能看到。'
+      : '切回普通项目？\n\n计划里的天、条目和已勾的进度都不会删，切回计划型还在。';
+    if (!confirm(msg)) return;
+    const upd = { id, type };
+    if (type === 'plan' && !p.startDay) upd.startDay = Date.now();
+    Store.upsert('workProj', upd);
+    if (type === 'plan' && !this.days(id).length) this.addDay(id, true);
+    this.edit = false; this.curDay = null;
+    this.renderProj();
+    UI.toast(type === 'plan' ? '已切成计划型，点「编辑计划」改内容' : '已切回普通项目');
+  },
+
+  /** 删项目：连它的普通条目和计划内容一起软删除（留墓碑，另一台设备不会复活它） */
+  purge(proj){
+    Store.list('work').filter(x => x.proj === proj).forEach(x => Store.softDelete('work', x.id));
+    this.days(proj).forEach(d => {
+      for (let b = 0; b < 3; b++) this.items(proj, d.id, b).forEach(it => {
+        this.subs(it.id).forEach(s => Store.softDelete('planSub', s.id));
+        Store.softDelete('planItem', it.id);
+      });
+      Store.softDelete('planDay', d.id);
+    });
   },
 
   delProj(id){
     const p = Store.list('workProj').find(x => x.id === id);
     if (!p) return;
-    const mine = Store.list('work').filter(x => x.proj === id);
-    const tail = mine.length ? '，里面的 ' + mine.length + ' 条记录会一起删掉' : '';
+    const nd = this.days(id).length;
+    const nl = Store.list('work').filter(x => x.proj === id).length;
+    const parts = [];
+    if (nd) parts.push(nd + ' 天计划');
+    if (nl) parts.push(nl + ' 条清单');
+    const tail = parts.length ? '，里面的 ' + parts.join('、') + ' 会一起删掉' : '';
     if (!confirm('删除项目「' + p.name + '」' + tail + '？\n\n删了就找不回来了。')) return;
-    mine.forEach(x => Store.softDelete('work', x.id));
+    this.purge(id);
     Store.softDelete('workProj', id);
+    this.view = 'home'; this.cur = null; this.edit = false; this.curDay = null;
     UI.toast('项目已删除');
     this.render();
   },
 
-  /* ── 条目 ── */
+  /* ════════ 计划型项目 ════════ */
+
+  days(proj){ return Store.list('planDay').filter(x => x.proj === proj)
+    .sort((a, b) => (+a.order || 0) - (+b.order || 0)); },
+  items(proj, dayId, blk){ return Store.list('planItem')
+    .filter(x => x.proj === proj && x.day === dayId && x.blk === blk)
+    .sort((a, b) => (+a.order || 0) - (+b.order || 0)); },
+  subs(itemId){ return Store.list('planSub').filter(x => x.item === itemId)
+    .sort((a, b) => (+a.order || 0) - (+b.order || 0)); },
+  labels(d){ return (d && d.labels && d.labels.length === 3) ? d.labels : this.BLKS; },
+
+  done(id){ const r = Store.list('planDone').find(x => x.id === id); return !!(r && r.done); },
+  toggleDone(id){ Store.upsert('planDone', { id, done: !this.done(id) }); this.renderProj(); },
+
+  /** 今天该看第几天：从首日算起，夹在 1..总天数 之间 */
+  planToday(proj, n){
+    const p = Store.list('workProj').find(x => x.id === proj);
+    const a = new Date((p && p.startDay) || Date.now()); a.setHours(0, 0, 0, 0);
+    const b = new Date(); b.setHours(0, 0, 0, 0);
+    const d = Math.round((b - a) / 864e5) + 1;
+    return Math.max(1, Math.min(n || 1, d));
+  },
+
+  /** 某天的完成情况（条目和子项一起算） */
+  dayStat(proj, dayId){
+    let total = 0, done = 0;
+    for (let b = 0; b < 3; b++) this.items(proj, dayId, b).forEach(it => {
+      total++; if (this.done(it.id)) done++;
+      this.subs(it.id).forEach(s => { total++; if (this.done(s.id)) done++; });
+    });
+    return { total, done, pct: total ? Math.round(done / total * 100) : 0 };
+  },
+
+  /** 整块砖的进度：全部天加起来 */
+  planBrief(proj){
+    const ds = this.days(proj);
+    let total = 0, done = 0;
+    ds.forEach(d => { const s = this.dayStat(proj, d.id); total += s.total; done += s.done; });
+    return { days: ds.length, total, done, pct: total ? Math.round(done / total * 100) : 0 };
+  },
+
+  addDay(proj, quiet){
+    const ds = this.days(proj);
+    const order = ds.length ? (+ds[ds.length - 1].order || 0) + 1 : 1;
+    Store.upsert('planDay', { proj, order, title: '', out: '', labels: this.BLKS.slice() });
+    if (!quiet){ this.curDay = order; this.renderProj(); UI.toast('加了第 ' + order + ' 天'); }
+  },
+
+  delDay(proj, dayId){
+    const d = this.days(proj).find(x => x.id === dayId);
+    if (!d) return;
+    if (!confirm('删除第 ' + d.order + ' 天？这一天里的全部内容会一起删掉。')) return;
+    for (let b = 0; b < 3; b++) this.items(proj, dayId, b).forEach(it => {
+      this.subs(it.id).forEach(s => Store.softDelete('planSub', s.id));
+      Store.softDelete('planItem', it.id);
+    });
+    Store.softDelete('planDay', dayId);
+    this.curDay = null;
+    this.renderProj();
+  },
+
+  saveDay(dayId, field, val){
+    const upd = { id: dayId }; upd[field] = val;
+    Store.upsert('planDay', upd);
+  },
+
+  saveLabel(dayId, bi, val){
+    const d = Store.list('planDay').find(x => x.id === dayId);
+    if (!d) return;
+    const ls = this.labels(d).slice();
+    ls[bi] = val;
+    Store.upsert('planDay', { id: dayId, labels: ls });
+  },
+
+  addItem(proj, dayId, blk, inputId){
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    const text = (el.value || '').trim();
+    if (!text) return UI.toast('先写点什么');
+    const list = this.items(proj, dayId, blk);
+    Store.upsert('planItem', { proj, day: dayId, blk, text,
+      order: list.length ? (+list[list.length - 1].order || 0) + 1 : 1 });
+    this.renderProj();
+    document.getElementById(inputId)?.focus();      // 回到输入框，能连着加好几条
+  },
+
+  addSub(itemId, inputId){
+    const el = document.getElementById(inputId);
+    if (!el) return;
+    const text = (el.value || '').trim();
+    if (!text) return UI.toast('先写点什么');
+    const list = this.subs(itemId);
+    Store.upsert('planSub', { item: itemId, text,
+      order: list.length ? (+list[list.length - 1].order || 0) + 1 : 1 });
+    this.renderProj();
+    document.getElementById(inputId)?.focus();
+  },
+
+  setItemText(id, val){ Store.upsert('planItem', { id, text: val }); },
+  setSubText(id, val){ Store.upsert('planSub', { id, text: val }); },
+
+  delItem(id){
+    this.subs(id).forEach(s => Store.softDelete('planSub', s.id));
+    Store.softDelete('planItem', id);
+    this.renderProj();
+  },
+  delSub(id){ Store.softDelete('planSub', id); this.renderProj(); },
+
+  setStart(proj){
+    const el = document.getElementById('wkStart');
+    if (!el || !el.value) return UI.toast('先选个日期');
+    const d = new Date(el.value + 'T00:00:00');
+    if (isNaN(d.getTime())) return UI.toast('日期不对');
+    Store.upsert('workProj', { id: proj, startDay: d.getTime() });
+    this.curDay = null;
+    this.renderProj();
+    UI.toast('第 1 天已设为 ' + el.value);
+  },
+
+  /* ════════ 普通项目：跟进 / 交付 ════════ */
+
   add(proj, kind, inputId){
     const el = document.getElementById(inputId);
     if (!el) return;
@@ -1396,12 +1619,11 @@ const Work = {
     const it = Store.list('work').find(x => x.id === id);
     if (!it) return;
     Store.upsert('work', { id, done: !it.done });
-    this.render();
+    this.renderProj();
   },
 
-  del(id){ Store.softDelete('work', id); this.render(); },
+  del(id){ Store.softDelete('work', id); this.renderProj(); },
 
-  /* ── 渲染：一列条目 ── */
   rows(proj, kind){
     const list = Store.list('work')
       .filter(x => x.proj === proj && x.kind === kind)
@@ -1415,7 +1637,6 @@ const Work = {
       </div>`).join('');
   },
 
-  /** 跟进 / 交付 的标题、提示语和 emoji */
   META: {
     follow:  { ico:'🔁', name:'跟进', ph:'要跟的事，比如「等对方回话」' },
     deliver: { ico:'📦', name:'交付', ph:'要交出去的东西，做完打勾' }
@@ -1436,34 +1657,157 @@ const Work = {
   stat(proj){
     const el = document.getElementById('wkStat');
     if (!el) return;
+    const p = Store.list('workProj').find(x => x.id === proj);
+    if (p && p.type === 'plan'){
+      const ds = this.days(proj);
+      const t  = this.planToday(proj, ds.length || 1);
+      const day = ds.find(d => +d.order === t) || ds[0];
+      const st = day ? this.dayStat(proj, day.id) : { total: 0, done: 0 };
+      el.textContent = '共 ' + ds.length + ' 天 · 今天该看 Day ' + t +
+        (st.total ? ' · 今天完成 ' + st.done + '/' + st.total : '');
+      return;
+    }
     const all = Store.list('work').filter(x => x.proj === proj);
     if (!all.length) { el.textContent = '还没内容，下面加第一条'; return; }
     const done = all.filter(x => x.done).length;
     el.textContent = '共 ' + all.length + ' 条 · 已完成 ' + done + ' 条 · 还剩 ' + (all.length - done) + ' 条';
   },
 
+  /* ════════ 渲染 ════════ */
+
+  /** 项目内部的顶部条 + 内容 */
   renderProj(){
     const box = document.getElementById('workProj');
-    const p = Store.list('workProj').find(x => x.id === this.cur);
     if (!box) return;
-    if (!p) { this.home(); return; }          // 项目被删了（或在别的设备删了），退回项目墙
+    const p = Store.list('workProj').find(x => x.id === this.cur);
+    if (!p) { this.home(); return; }              // 项目被删了（或在别的设备删了），退回项目墙
+    const isPlan = p.type === 'plan';
     box.innerHTML = `
       <div class="wkHead">
         <div class="wkBar">
           <button class="btn ghost" onclick="Work.home()">← 工作</button>
           <span class="sp"></span>
+          ${isPlan ? `<button class="btn ghost" onclick="Work.toggleEdit()">${this.edit ? '完成编辑' : '编辑计划'}</button>` : ''}
+          <button class="btn ghost" onclick="Work.setType('${p.id}','${isPlan ? 'normal' : 'plan'}')">${isPlan ? '切为普通' : '切为计划型'}</button>
           <button class="btn ghost" onclick="Work.renameProj('${p.id}')">重命名</button>
           <button class="btn ghost" onclick="Work.delProj('${p.id}')">删除</button>
         </div>
         <div class="page-title" style="margin-top:14px">${Util.esc(p.name)}</div>
         <div class="page-sub" id="wkStat"></div>
-      </div>
-      ${this.group(p.id, 'follow')}
-      ${this.group(p.id, 'deliver')}`;
+      </div>`;
+    box.insertAdjacentHTML('beforeend', isPlan ? this.planView(p)
+      : this.group(p.id, 'follow') + this.group(p.id, 'deliver'));
     this.stat(p.id);
   },
 
-  /** 一块砖要显示的数字：总数 / 未完成 / 完成度 */
+  /** 计划型项目的正文：一天一屏，天可切换，编辑模式下可改一切 */
+  planView(p){
+    const ds = this.days(p.id);
+    const n  = ds.length || 1;
+    const t  = this.planToday(p.id, n);
+    const day = ds.find(d => +d.order === (this.curDay || t)) || ds[0];
+    if (!day) return `<div class="card wide">
+        <p class="hint" style="margin-top:0">这个计划还没有内容。</p>
+        <button class="btn" onclick="Work.addDay('${p.id}')">＋ 加一天</button>
+      </div>`;
+    this.curDay = +day.order;
+    const st = this.dayStat(p.id, day.id);
+    const rel = +day.order === t ? '就是今天' : (+day.order < t ? '已过去' : '还没到');
+
+    const chips = ds.map(d => `<button class="chip${d.id === day.id ? ' on' : ''}"
+        onclick="Work.pickDay(${+d.order})">${+d.order === t ? '今天 Day ' + d.order : 'Day ' + d.order}</button>`).join('');
+
+    const blocks = [0, 1, 2].map(b => this.blkRows(p, day, b)).join('');
+
+    const out = day.out
+      ? `<b>Day ${day.order} 产出：</b>${Util.esc(day.out)}<br>` : '';
+
+    return `<div class="card wide">
+      <div class="hero">Day ${day.order}<span class="unit">/ ${n} 天</span></div>
+      <p class="hint">${Util.esc(day.title || '还没写标题')}　·　${rel}</p>
+      <div class="chips">${chips}</div>
+      ${this.edit ? this.editBar(p, day) : ''}
+      <div style="margin-top:4px">${blocks}</div>
+      <div class="hint" style="margin-top:16px;padding-top:12px;border-top:1px solid var(--line);line-height:1.8">
+        ${out}完成进度 ${st.done} / ${st.total}
+      </div>
+      <details style="margin-top:18px">
+        <summary class="hint" style="cursor:pointer">第 1 天不是今天？点这里改</summary>
+        <div class="row" style="margin-top:10px">
+          <input type="date" id="wkStart" value="${Util.dateOf(new Date(p.startDay || Date.now()))}">
+          <button class="btn ghost" onclick="Work.setStart('${p.id}')">设为首日</button>
+        </div>
+        <p class="hint">改完页面会自动对上「今天该看哪天」。</p>
+      </details>
+    </div>`;
+  },
+
+  /** 编辑模式下多出来的一排：改这天的标题和产出、加天、删天 */
+  editBar(p, day){
+    return `<div class="edBox">
+      <input type="text" value="${Util.esc(day.title || '')}" placeholder="这一天的标题，如「打地基 + 自我介绍」"
+        onchange="Work.saveDay('${day.id}','title',this.value)">
+      <input type="text" value="${Util.esc(day.out || '')}" placeholder="当日产出，如「自我介绍定稿 + 红线清单」"
+        onchange="Work.saveDay('${day.id}','out',this.value)">
+      <div class="row" style="flex-wrap:wrap">
+        <button class="btn ghost" onclick="Work.addDay('${p.id}')">＋ 加一天</button>
+        <button class="btn ghost" onclick="Work.delDay('${p.id}','${day.id}')">删除这一天</button>
+        <span class="hint" style="margin:0">块名和条目都能直接改，改完点一下别处就存了</span>
+      </div>
+    </div>`;
+  },
+
+  /** 一块（上午 / 下午 / 晚上）：标题 + 条目 + 子项 */
+  blkRows(p, day, b){
+    const label = this.labels(day)[b] || this.BLKS[b];
+    const items = this.items(p.id, day.id, b);
+
+    const head = this.edit
+      ? `<input class="edIn" type="text" value="${Util.esc(label)}" onchange="Work.saveLabel('${day.id}',${b},this.value)">`
+      : `<span>${Util.esc(label)}</span>`;
+
+    const rows = items.map(it => {
+      const on = this.done(it.id);
+      if (this.edit) {
+        const subs = this.subs(it.id).map(s => `
+          <div class="item ivSub">
+            <input class="edIn" type="text" value="${Util.esc(s.text)}" onchange="Work.setSubText('${s.id}',this.value)">
+            <button class="del" onclick="Work.delSub('${s.id}')">✕</button>
+          </div>`).join('');
+        return `<div class="item">
+            <input class="edIn" type="text" value="${Util.esc(it.text)}" onchange="Work.setItemText('${it.id}',this.value)">
+            <button class="del" onclick="Work.delItem('${it.id}')">✕</button>
+          </div>${subs}
+          <div class="row ivSub">
+            <input type="text" id="wkSub_${it.id}" placeholder="给这条加个子项">
+            <button class="btn ghost" onclick="Work.addSub('${it.id}','wkSub_${it.id}')">＋</button>
+          </div>`;
+      }
+      const subs = this.subs(it.id).map(s => {
+        const so = this.done(s.id);
+        return `<div class="item${so ? ' done' : ''} ivSub" onclick="Work.toggleDone('${s.id}')">
+            <span class="box">${so ? '✓' : ''}</span>
+            <span class="grow">${Util.esc(s.text)}</span>
+          </div>`;
+      }).join('');
+      return `<div class="item${on ? ' done' : ''}" onclick="Work.toggleDone('${it.id}')">
+          <span class="box">${on ? '✓' : ''}</span>
+          <span class="grow">${Util.esc(it.text)}</span>
+        </div>${subs}`;
+    }).join('');
+
+    const empty = (!items.length && !this.edit) ? '<div class="empty">这一块还没排内容</div>' : '';
+    const addIn = this.edit
+      ? `<div class="row" style="margin-top:8px">
+           <input type="text" id="wkAdd_${b}" placeholder="加一条，回车就行"
+             onkeydown="if(event.key==='Enter')Work.addItem('${p.id}','${day.id}',${b},'wkAdd_${b}')">
+           <button class="btn" onclick="Work.addItem('${p.id}','${day.id}',${b},'wkAdd_${b}')">加</button>
+         </div>` : '';
+
+    return `<div class="ivGrp">${head}</div>${rows}${empty}${addIn}`;
+  },
+
+  /** 一块砖要显示的数字：普通项目用「跟进 / 交付」，计划型用「Day N / 天数和完成度」 */
   brief(proj){
     const mine = Store.list('work').filter(x => x.proj === proj);
     const left = mine.filter(x => !x.done).length;
@@ -1471,62 +1815,73 @@ const Work = {
     return { n: mine.length, left, done, pct: mine.length ? Math.round(done / mine.length * 100) : 0 };
   },
 
+  brick(p){
+    const del = `<button class="pjDel" onclick="event.stopPropagation();Work.delProj('${p.id}')">✕</button>`;
+
+    if (p.type === 'plan'){
+      const ds = this.days(p.id);
+      const n  = ds.length || 1;
+      const t  = this.planToday(p.id, n);
+      const day = ds.find(d => +d.order === t) || ds[0];
+      const st = day ? this.dayStat(p.id, day.id) : { total: 0, done: 0, pct: 0 };
+      return `<div class="pj" onclick="Work.open('${p.id}')">
+        <div class="pjTop">
+          <span class="pjIco">📅</span>
+          <span class="pjName">${Util.esc(p.name)}</span>
+          ${del}
+        </div>
+        <div class="pjMeta">
+          <span>Day <b>${t}</b> / ${n}</span>
+          <span>今天 <b>${st.done}/${st.total}</b></span>
+        </div>
+        <div class="pjBar"><i style="width:${st.pct}%"></i></div>
+      </div>`;
+    }
+
+    const b = this.brief(p.id);
+    return `<div class="pj" onclick="Work.open('${p.id}')">
+      <div class="pjTop">
+        <span class="pjIco">📁</span>
+        <span class="pjName">${Util.esc(p.name)}</span>
+        ${del}
+      </div>
+      <div class="pjMeta">
+        <span>跟进 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'follow' && !x.done).length}</b></span>
+        <span>交付 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'deliver' && !x.done).length}</b></span>
+        <span>${b.n ? '完成 <b>' + b.done + '/' + b.n + '</b>' : '还没内容'}</span>
+      </div>
+      <div class="pjBar"><i style="width:${b.pct}%"></i></div>
+    </div>`;
+  },
+
   renderHome(){
     const grid = document.getElementById('workProjGrid');
     if (!grid) return;
-
-    // 内置砖：面试冲刺
-    const day  = Interview.todayDay();
-    const ids  = Interview.ids(day);
-    const done = ids.filter(i => Interview.isDone(i)).length;
-    const pct  = ids.length ? Math.round(done / ids.length * 100) : 0;
-    const iv = `<div class="pj" onclick="Work.open('${this.IV}')">
-        <div class="pjTop">
-          <span class="pjIco">🎤</span>
-          <span class="pjName">面试冲刺</span>
-          <span class="tag">内置</span>
-        </div>
-        <div class="pjMeta">
-          <span>Day <b>${day}</b> / 4</span>
-          <span>今天 <b>${done}/${ids.length}</b></span>
-        </div>
-        <div class="pjBar"><i style="width:${pct}%"></i></div>
-      </div>`;
-
     const mine = Store.list('workProj')
       .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-      .map(p => {
-        const b = this.brief(p.id);
-        return `<div class="pj" onclick="Work.open('${p.id}')">
-          <div class="pjTop">
-            <span class="pjIco">📁</span>
-            <span class="pjName">${Util.esc(p.name)}</span>
-            <button class="pjDel" onclick="event.stopPropagation();Work.delProj('${p.id}')">✕</button>
-          </div>
-          <div class="pjMeta">
-            <span>跟进 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'follow' && !x.done).length}</b></span>
-            <span>交付 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'deliver' && !x.done).length}</b></span>
-            <span>${b.n ? '完成 <b>' + b.done + '/' + b.n + '</b>' : '还没内容'}</span>
-          </div>
-          <div class="pjBar"><i style="width:${b.pct}%"></i></div>
-        </div>`;
-      }).join('');
+      .map(p => this.brick(p)).join('');
 
     const add = `<div class="pj pjAdd">
-        <input type="text" id="workProjInput" placeholder="＋ 新建项目">
+        <input type="text" id="workProjInput" placeholder="＋ 新建项目名字">
+        <div class="chips" style="margin-top:0">
+          <button class="chip on" id="newTypeNormal" onclick="Work.pickNewType('normal')">普通项目</button>
+          <button class="chip" id="newTypePlan" onclick="Work.pickNewType('plan')">计划型</button>
+        </div>
         <button class="btn" onclick="Work.addProj()">建项目</button>
+        <div class="hint" style="margin:0">普通项目分「跟进 / 交付」；计划型按天推进</div>
       </div>`;
 
-    grid.innerHTML = iv + mine + add;
+    grid.innerHTML = mine + add;
   },
 
   /** reset=true 时回到项目墙。侧边栏点「工作」会传 true；同步重绘不传，原地不动 */
   render(reset){
     this.migrate();
-    if (reset) { this.view = 'home'; this.cur = null; }
+    this.migratePlan();
+    if (reset) { this.view = 'home'; this.cur = null; this.edit = false; this.curDay = null; }
+
     const home = document.getElementById('workHome');
     const sub  = document.getElementById('workSub');
-    const iv   = document.getElementById('workIv');
     if (!home || !sub) return;
 
     const isHome = this.view === 'home';
@@ -1534,217 +1889,99 @@ const Work = {
     sub.classList.toggle('hide', isHome);
     if (isHome) { this.renderHome(); return; }
 
-    const isIV = this.cur === this.IV;
-    if (iv) iv.classList.toggle('hide', !isIV);
     const box = document.getElementById('workProj');
     if (box) box.innerHTML = '';
-    if (isIV) Interview.render(); else this.renderProj();
+    this.renderProj();
   }
 };
 /* ==== 功能：工作 END ==== */
 
-/* ==== 功能：面试冲刺 START ==== */
-/* 四天计划内置在这里。i 里每条：字符串 = 一条任务；{t,s:[...]} = 一条带子项。
-   勾选状态按固定 id（d2b0i1 这种）存进 planDone，跨设备能正确合并。 */
-const Interview = {
-  PLAN: [
-    { d:1, title:'打地基 + 自我介绍 + 概念方法论',
-      out:'自我介绍定稿 + 财经红线清单',
-      b:[
-        { t:'上午 1.5h', i:[
-          '背岗位本质：算法之前的「质量闸门」——准确是底线，风险分级决定审核强度。',
-          '写 1 分钟和 3 分钟自我介绍，突出：财经敏感度 + 内容判断 + 数据/规则思维。'
-        ]},
-        { t:'下午 2h', i:[
-          '概念题：硬新闻 vs 软新闻、时效 vs 准确、泛知识研判价值。',
-          '方法论：内容质量四维——信源权威性、数据可验证性、观点合理性、表达规范性。',
-          'UGC 风险：冒充专业 + 诱导投资，识别靠关键词 + 资质 + 举报聚类。'
-        ]},
-        { t:'晚上 1h', i:[
-          '每个题用自己的话讲 1 分钟，录音回听。',
-          { t:'整理财经红线 10 条（下面 7 条打底，自己再补 3 条）', s:[
-            '不得荐股',
-            '不得承诺收益',
-            '不得冒充持牌机构',
-            '不得曲解政策',
-            '不得数据造假',
-            '不得制造恐慌',
-            '不得标题党'
-          ]}
-        ]}
-      ]
-    },
-    { d:2, title:'字节产品 + 技术题 + 财经专项',
-      out:'3 个热点分析 + 技术题话术',
-      b:[
-        { t:'上午 2h', i:[
-          '字节财经内容特点：算法驱动、规模大、质量方差大。',
-          '研判与算法的关系：算法负责「推给谁」，研判负责「能不能推」。',
-          '技术题：AI 能筛不能判；NLP 做分类、实体识别、相似度检测；实时架构分层——毫秒规则、秒级模型、分钟级人工。'
-        ]},
-        { t:'下午 2h', i:[
-          '找 3 个财经热点（如降准、A股波动、美联储），每个都用同一套框架过一遍。',
-          { t:'每个热点统一走「定性 → 定级 → 方案」', s:[
-            '定性：资讯 / 解读 / 观点 / 教程？',
-            '定级：高风险 / 中风险 / 低风险？',
-            '方案：人工审核 / 限流 / 打标 / 算法放行？'
-          ]}
-        ]},
-        { t:'晚上 1h', i:[
-          '默写：质量四维、风险分级、AI 局限。',
-          { t:'自测：一条视频说「央行降准，房价要暴涨」，你怎么研判？', s:[
-            '定性：政策解读 + 预测',
-            '定级：高风险——信源非官方、观点绝对化、可能误导',
-            '方案：限流 + 人工复核 + 打标「观点仅供参考」'
-          ]}
-        ]}
-      ]
-    },
-    { d:3, title:'实操项目 + 行为面 + 模拟',
-      out:'2 个 STAR 故事 + 实操题回答模板',
-      b:[
-        { t:'上午 2h', i:[
-          { t:'写 2 个 STAR 故事，每个 200 字', s:[
-            '你识别过什么风险内容 / 问题？',
-            '你用什么方法提升了效率或准确率？',
-            '重点写：判断依据、方法、量化结果'
-          ]}
-        ]},
-        { t:'下午 2h', i:[
-          '练实操题：用户反馈低质量内容、内容分类体系、审核规则设计。',
-          '统一套路：定位问题 → 归因分析 → 分级处理 → 闭环验证。'
-        ]},
-        { t:'晚上 1.5h', i:[
-          '找朋友或自问自答，模拟面试 30 分钟。',
-          '录音，重点听：有没有先定性、再定级、最后给方案？有没有举例？'
-        ]}
-      ]
-    },
-    { d:4, title:'全真模拟 + 冲刺背诵 + 面试准备',
-      out:'',
-      b:[
-        { t:'上午 2h', i:[
-          '全流程模拟：自我介绍 → 项目 → 专业题 → 反问，连续 1 小时。',
-          '练「不会的题」：先定性，再定级，最后给处理思路。'
-        ]},
-        { t:'下午 2h', i:[
-          { t:'过精炼背诵版', s:[
-            '岗位本质：算法前的质量闸门，准确是底线，风险分级。',
-            '判断框架：信源、数据、观点、表达。',
-            '硬新闻看信源，软新闻看逻辑，时效让位准确。',
-            'UGC 风险：冒充专业 + 诱导投资。',
-            '字节：规模实时、质量方差大，研判输出质量分和标签。',
-            'AI 能筛不能判，人集中在「判」。',
-            '项目讲 STAR：判断依据、方法、量化。'
-          ]},
-          '准备 3 个反问：团队研判重点？财经最常遇风险？人工与算法怎么分工？'
-        ]},
-        { t:'晚上 1h', i:[
-          '轻量复述框架，早睡。'
-        ]}
-      ]
+/* ==== 功能：首页 START ====
+   点侧边栏顶上那个「CC的坩埚」进来。九块砖，每块一行实时摘要——
+   打开第一眼就知道哪条线今天还没动，不用一个个点进去翻。
+   摘要全是现算的，不额外存任何数据。 */
+const Home = {
+  /** 金额加千分位，看着顺眼些 */
+  money(n){
+    const s = (Math.round(n * 100) / 100).toString().split('.');
+    return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (s[1] ? '.' + s[1] : '');
+  },
+
+  /** 九块砖：图标、名字、一行实时摘要 */
+  subs(){
+    const t = Util.today();
+
+    const work = Store.list('work');
+    const left = work.filter(x => !x.done).length;
+
+    const ym = t.slice(0, 7);
+    const spend = Store.list('money')
+      .filter(x => x.type === 'out' && (x.date || '').slice(0, 7) === ym)
+      .reduce((s, x) => s + (+x.amount || 0), 0);
+
+    const wt = Store.list('weight').sort((a, b) =>
+      (a.date || '').localeCompare(b.date || '') || (a._u || 0) - (b._u || 0));
+    const lw = wt[wt.length - 1], pw = wt[wt.length - 2];
+
+    const mins = Store.list('study').filter(x => x.date === t)
+      .reduce((s, x) => s + (+x.min || 0), 0);
+    const mood = Store.list('mood').find(x => x.date === t);
+
+    const cds = Store.list('countdown').sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const t0 = new Date(t + 'T00:00:00');
+    const next = cds.find(x => new Date((x.date || '') + 'T00:00:00') >= t0) || cds[cds.length - 1];
+    let cdTxt = '还没有倒计时';
+    if (next){
+      const n = Math.round((new Date((next.date || '') + 'T00:00:00') - t0) / 864e5);
+      cdTxt = isNaN(n) ? '日期没填对'
+        : (n >= 0 ? next.title + ' 还剩 ' + n + ' 天' : next.title + ' 已过 ' + (-n) + ' 天');
     }
-  ],
 
-  cur: null,
+    const water  = Store.countDaily('water');
+    const rc     = Recap.collect();
+    const syncOn = (typeof Sync !== 'undefined') && Sync.on();
 
-  /** 第 1 天是哪天（时间戳）。默认 2026-10-16，可在页面底部改 */
-  start(){
-    let s = Store.get('ivStart', 0);
-    if (!s) { s = new Date(2026, 9, 16).getTime(); Store.set('ivStart', s); }   // 2026-10-16 = 第 1 天
-    return s;
-  },
-
-  /** 今天该看第几天 */
-  todayDay(){
-    const a = new Date(this.start()); a.setHours(0, 0, 0, 0);
-    const b = new Date();             b.setHours(0, 0, 0, 0);
-    const n = Math.round((b - a) / 864e5) + 1;
-    return Math.min(4, Math.max(1, n));
-  },
-
-  dayState(d){ const t = this.todayDay(); return d === t ? 'today' : (d < t ? 'past' : 'future'); },
-
-  /** 某天全部条目 id（含子项） */
-  ids(day){
-    const pd = this.PLAN.find(x => x.d === day);
-    if (!pd) return [];
-    const out = [];
-    pd.b.forEach((blk, bi) => blk.i.forEach((it, ii) => {
-      const base = 'd' + day + 'b' + bi + 'i' + ii;
-      out.push(base);
-      if (typeof it === 'object' && it.s) it.s.forEach((_, si) => out.push(base + 's' + si));
-    }));
-    return out;
-  },
-
-  isDone(id){
-    const r = Store.list('planDone').find(x => x.id === id);
-    return !!(r && r.done);
-  },
-
-  toggle(id){ Store.upsert('planDone', { id, done: !this.isDone(id) }); this.render(); },
-
-  pick(d){ this.cur = d; this.render(); },
-
-  setStart(){
-    const v = document.getElementById('ivStart').value;
-    if (!v) return UI.toast('先选个日期');
-    const d = new Date(v + 'T00:00:00');
-    if (isNaN(d.getTime())) return UI.toast('日期不对');
-    Store.set('ivStart', d.getTime());
-    this.cur = null;
-    UI.toast('第 1 天已设为 ' + v);
-    this.render();
-  },
-
-  row(id, text, sub){
-    const on = this.isDone(id);
-    return `<div class="item${on ? ' done' : ''}${sub ? ' ivSub' : ''}" onclick="Interview.toggle('${id}')">
-        <span class="box">${on ? '✓' : ''}</span>
-        <span class="grow">${Util.esc(text)}</span>
-      </div>`;
+    return [
+      { id:'work', ico:'💼', name:'工作',
+        sum: left ? left + ' 条进行中' : (work.length ? '都处理完了' : '暂无进行中') },
+      { id:'money', ico:'💰', name:'记账',
+        sum: spend > 0 ? '本月支出 ¥' + this.money(spend) : '本月还没记' },
+      { id:'weight', ico:'⚖️', name:'体重',
+        sum: lw ? (+lw.value).toFixed(1) + ' kg' +
+          (pw ? ' · ' + ((+lw.value - +pw.value) >= 0 ? '+' : '') + (+lw.value - +pw.value).toFixed(1) : '')
+          : '还没记过' },
+      { id:'study', ico:'📚', name:'学习',
+        sum: mins ? (mins >= 60 ? (mins / 60).toFixed(1) + ' 小时' : mins + ' 分钟') + ' / 今天'
+                  : '今天还没学' },
+      { id:'mood', ico:'💭', name:'心情',
+        sum: mood ? '今天 ' + (mood.mood || '🙂') + (mood.note ? ' · ' + String(mood.note).slice(0, 10) : '')
+                  : '今天还没记' },
+      { id:'countdown', ico:'🎯', name:'倒计时', sum: cdTxt },
+      { id:'water', ico:'🫗', name:'喝水', sum: water + ' / ' + Water.GOAL + ' 杯' },
+      { id:'recap', ico:'📊', name:'复盘',
+        sum: rc.done ? '本周完成 ' + rc.done + ' 件 · 连续 ' + rc.streak + ' 天' : '本周还没记录' },
+      { id:'settings', ico:'⚙️', name:'设置',
+        sum: syncOn ? '同步已开' : '同步未开 · 数据只在本机' }
+    ];
   },
 
   render(){
-    const box = document.getElementById('ivBody');
-    if (!box) return;
-    const t   = this.todayDay();
-    const day = this.cur || t;
-    this.cur  = day;
-    const pd  = this.PLAN.find(x => x.d === day);
-    if (!pd) return;
-
-    document.getElementById('ivNum').innerHTML = 'Day ' + day + '<span class="unit">/ 4 天</span>';
-    document.getElementById('ivSub').textContent =
-      pd.title + (day === t ? '　·　就是今天' : (day < t ? '　·　已过去' : '　·　还没到'));
-
-    document.getElementById('ivChips').innerHTML = this.PLAN.map(x => {
-      const st = this.dayState(x.d);
-      return `<button class="chip${x.d === day ? ' on' : ''}" onclick="Interview.pick(${x.d})">${
-        st === 'today' ? '今天 Day ' + x.d : 'Day ' + x.d}</button>`;
-    }).join('');
-
-    box.innerHTML = pd.b.map((blk, bi) => {
-      const rows = blk.i.map((it, ii) => {
-        const base = 'd' + day + 'b' + bi + 'i' + ii;
-        if (typeof it === 'string') return this.row(base, it, false);
-        const subs = (it.s || []).map((s, si) => this.row(base + 's' + si, s, true)).join('');
-        return this.row(base, it.t, false) + subs;
-      }).join('');
-      return `<div class="ivGrp">${Util.esc(blk.t)}</div>${rows}`;
-    }).join('');
-
-    const all = this.ids(day), done = all.filter(id => this.isDone(id)).length;
-    document.getElementById('ivOut').innerHTML =
-      (pd.out ? 'Day ' + day + ' 产出：' + Util.esc(pd.out) + '<br>' : '') +
-      '完成进度 ' + done + ' / ' + all.length;
-
-    const si = document.getElementById('ivStart');
-    if (si) si.value = Util.dateOf(new Date(this.start()));
+    const sub = document.getElementById('homeSub');
+    if (sub){
+      const wk = '日一二三四五六'[new Date().getDay()];
+      sub.textContent = Util.today() + ' 周' + wk + '　·　点方块进对应功能';
+    }
+    const grid = document.getElementById('homeGrid');
+    if (!grid) return;
+    grid.innerHTML = this.subs().map(b => `
+      <button class="hm" onclick="App.go('${b.id}')">
+        <span class="hmIco">${b.ico}</span>
+        <span class="hmName">${b.name}</span>
+        <span class="hmSum">${Util.esc(b.sum)}</span>
+      </button>`).join('');
   }
 };
-/* ==== 功能：面试冲刺 END ==== */
+/* ==== 功能：首页 END ==== */
 /* ==== 功能：记账 START ==== */
 const Money = {
   cats: ['餐饮', '交通', '学习', '人情', '医疗', '其他'],
@@ -2006,6 +2243,111 @@ const Water = {
   undo(){ Store.decrDaily('water'); this.render(); }
 };
 /* ==== 功能：喝水 END ==== */
+
+/* ═══════════════════════════════════════════════════════════
+   PLAN_SEED · 面试冲刺那份四天计划（原始素材）
+   只在第一次打开时用一次：Work.migratePlan() 把它塞进「面试冲刺」这个
+   计划型项目里，之后就完全交给用户在界面上改，代码不再参与。
+   条目 id 沿用 d1b0i1 这种旧编号，所以原来勾过的进度一条不丢。
+   ═══════════════════════════════════════════════════════════ */
+const PLAN_SEED = [
+  { d:1, title:'打地基 + 自我介绍 + 概念方法论',
+    out:'自我介绍定稿 + 财经红线清单',
+    b:[
+      { t:'上午 1.5h', i:[
+        '背岗位本质：算法之前的「质量闸门」——准确是底线，风险分级决定审核强度。',
+        '写 1 分钟和 3 分钟自我介绍，突出：财经敏感度 + 内容判断 + 数据/规则思维。'
+      ]},
+      { t:'下午 2h', i:[
+        '概念题：硬新闻 vs 软新闻、时效 vs 准确、泛知识研判价值。',
+        '方法论：内容质量四维——信源权威性、数据可验证性、观点合理性、表达规范性。',
+        'UGC 风险：冒充专业 + 诱导投资，识别靠关键词 + 资质 + 举报聚类。'
+      ]},
+      { t:'晚上 1h', i:[
+        '每个题用自己的话讲 1 分钟，录音回听。',
+        { t:'整理财经红线 10 条（下面 7 条打底，自己再补 3 条）', s:[
+          '不得荐股',
+          '不得承诺收益',
+          '不得冒充持牌机构',
+          '不得曲解政策',
+          '不得数据造假',
+          '不得制造恐慌',
+          '不得标题党'
+        ]}
+      ]}
+    ]
+  },
+  { d:2, title:'字节产品 + 技术题 + 财经专项',
+    out:'3 个热点分析 + 技术题话术',
+    b:[
+      { t:'上午 2h', i:[
+        '字节财经内容特点：算法驱动、规模大、质量方差大。',
+        '研判与算法的关系：算法负责「推给谁」，研判负责「能不能推」。',
+        '技术题：AI 能筛不能判；NLP 做分类、实体识别、相似度检测；实时架构分层——毫秒规则、秒级模型、分钟级人工。'
+      ]},
+      { t:'下午 2h', i:[
+        '找 3 个财经热点（如降准、A股波动、美联储），每个都用同一套框架过一遍。',
+        { t:'每个热点统一走「定性 → 定级 → 方案」', s:[
+          '定性：资讯 / 解读 / 观点 / 教程？',
+          '定级：高风险 / 中风险 / 低风险？',
+          '方案：人工审核 / 限流 / 打标 / 算法放行？'
+        ]}
+      ]},
+      { t:'晚上 1h', i:[
+        '默写：质量四维、风险分级、AI 局限。',
+        { t:'自测：一条视频说「央行降准，房价要暴涨」，你怎么研判？', s:[
+          '定性：政策解读 + 预测',
+          '定级：高风险——信源非官方、观点绝对化、可能误导',
+          '方案：限流 + 人工复核 + 打标「观点仅供参考」'
+        ]}
+      ]}
+    ]
+  },
+  { d:3, title:'实操项目 + 行为面 + 模拟',
+    out:'2 个 STAR 故事 + 实操题回答模板',
+    b:[
+      { t:'上午 2h', i:[
+        { t:'写 2 个 STAR 故事，每个 200 字', s:[
+          '你识别过什么风险内容 / 问题？',
+          '你用什么方法提升了效率或准确率？',
+          '重点写：判断依据、方法、量化结果'
+        ]}
+      ]},
+      { t:'下午 2h', i:[
+        '练实操题：用户反馈低质量内容、内容分类体系、审核规则设计。',
+        '统一套路：定位问题 → 归因分析 → 分级处理 → 闭环验证。'
+      ]},
+      { t:'晚上 1.5h', i:[
+        '找朋友或自问自答，模拟面试 30 分钟。',
+        '录音，重点听：有没有先定性、再定级、最后给方案？有没有举例？'
+      ]}
+    ]
+  },
+  { d:4, title:'全真模拟 + 冲刺背诵 + 面试准备',
+    out:'',
+    b:[
+      { t:'上午 2h', i:[
+        '全流程模拟：自我介绍 → 项目 → 专业题 → 反问，连续 1 小时。',
+        '练「不会的题」：先定性，再定级，最后给处理思路。'
+      ]},
+      { t:'下午 2h', i:[
+        { t:'过精炼背诵版', s:[
+          '岗位本质：算法前的质量闸门，准确是底线，风险分级。',
+          '判断框架：信源、数据、观点、表达。',
+          '硬新闻看信源，软新闻看逻辑，时效让位准确。',
+          'UGC 风险：冒充专业 + 诱导投资。',
+          '字节：规模实时、质量方差大，研判输出质量分和标签。',
+          'AI 能筛不能判，人集中在「判」。',
+          '项目讲 STAR：判断依据、方法、量化。'
+        ]},
+        '准备 3 个反问：团队研判重点？财经最常遇风险？人工与算法怎么分工？'
+      ]},
+      { t:'晚上 1h', i:[
+        '轻量复述框架，早睡。'
+      ]}
+    ]
+  }
+];
 
 App.init();
 </script>
