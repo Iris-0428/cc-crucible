@@ -1393,10 +1393,10 @@ const Interview = {
 
   cur: null,
 
-  /** 第 1 天是哪天（时间戳）。首次打开自动记为今天，可在页面底部改 */
+  /** 第 1 天是哪天（时间戳）。默认 2026-10-16，可在页面底部改 */
   start(){
     let s = Store.get('ivStart', 0);
-    if (!s) { s = Date.now(); Store.set('ivStart', s); }
+    if (!s) { s = new Date(2026, 9, 16).getTime(); Store.set('ivStart', s); }   // 2026-10-16 = 第 1 天
     return s;
   },
 
