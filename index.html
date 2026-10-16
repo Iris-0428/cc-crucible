@@ -258,6 +258,56 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .ivGrp{font-size:12px;color:var(--text-dim);margin:16px 0 2px;letter-spacing:.08em}
 .item.ivSub{margin-left:24px;font-size:.93em;border-bottom-style:none;padding:7px 0}
 #ivOut{margin-top:16px;padding-top:12px;border-top:1px solid var(--line);line-height:1.8}
+
+/* ==== 工作：项目墙 ==== */
+#workHome,#workSub,#workIv{display:flex;flex-direction:column;gap:var(--gap)}
+#workProj{display:flex;flex-direction:column;gap:var(--gap)}
+.hide{display:none!important}
+
+.pjGrid{display:grid;grid-template-columns:1fr;gap:var(--gap)}
+
+/* 一块砖。整块可点，唯独右上角那个 ✕ 不冒泡 */
+.pj{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:16px;cursor:pointer;
+  display:flex;flex-direction:column;gap:9px;
+  transition:transform var(--dur) var(--ease),border-color var(--dur) var(--ease);
+  text-align:left;
+}
+.pj:active{transform:scale(.985)}
+.pjTop{display:flex;align-items:center;gap:9px}
+.pjIco{font-size:20px;line-height:1;flex-shrink:0}
+.pjName{flex:1;min-width:0;font-size:16px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pjDel{background:none;border:none;font-family:inherit;color:var(--text-dim);font-size:15px;padding:0 2px;flex-shrink:0}
+.pjMeta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--text-dim);line-height:1.5}
+.pjMeta b{font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
+.pjBar{height:4px;border-radius:99px;background:var(--line);overflow:hidden}
+.pjBar i{display:block;height:100%;background:var(--accent);transition:width var(--dur) var(--ease)}
+
+/* 新建项目那一格：虚线框，不像其他砖那样能整块点 */
+.pjAdd{border-style:dashed;background:transparent;box-shadow:none;cursor:default;justify-content:center}
+.pjAdd:active{transform:none}
+.pjAdd input{background:var(--card)}
+.pjAdd .btn{padding:9px 14px;font-size:14px}
+
+.wkHead{display:flex;flex-direction:column;gap:2px}
+.wkBar{display:flex;align-items:center;gap:8px}
+.wkBar .btn{padding:9px 14px;font-size:14px}
+.wkBar .sp{flex:1}
+
+/* 项目内部：跟进 / 交付 两块并排 */
+.wkGrp{font-size:12px;color:var(--text-dim);letter-spacing:.08em;display:flex;align-items:center;gap:7px}
+
+@media (min-width:700px){
+  .pjGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (min-width:1100px){
+  .pjGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .page.on > #workHome,
+  .page.on > #workSub{grid-column:1 / -1}
+  #workProj{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);align-items:start}
+  #workProj > .wkHead{grid-column:1 / -1}
+}
 </style>
 </head>
 <body>
@@ -280,43 +330,48 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 
     <!-- ==== 功能：工作 START ==== -->
     <section class="page" id="page-work">
-      <div class="page-title">工作</div>
-      <div class="page-sub">要交的、要跟的，完成的自动沉底</div>
-      <div class="card wide">
-        <div class="row">
-          <input type="text" id="workInput" placeholder="要交什么 / 要跟进什么">
-          <button class="btn" onclick="Work.add()">加</button>
-        </div>
-        <div class="chips">
-          <button class="chip on" id="workKindTask" onclick="Work.setKind('task')">交任务</button>
-          <button class="chip" id="workKindFollow" onclick="Work.setKind('follow')">跟进</button>
-        </div>
-        <div id="workList" style="margin-top:8px"></div>
+
+      <!-- 视图一：项目墙。一个项目一块砖 -->
+      <div id="workHome">
+        <div class="page-title">工作</div>
+        <div class="page-sub">一个项目一块砖，点进去再分跟进和交付</div>
+        <div class="pjGrid" id="workProjGrid"></div>
       </div>
+
+      <!-- 视图二：某个项目里面 -->
+      <div id="workSub" class="hide">
+        <div id="workProj"></div>
+
+        <!-- ==== 功能：面试冲刺 START ==== -->
+        <div id="workIv" class="hide">
+          <div class="wkHead">
+            <div class="wkBar">
+              <button class="btn ghost" onclick="Work.home()">← 工作</button>
+            </div>
+            <div class="page-title" style="margin-top:14px">面试冲刺</div>
+            <div class="page-sub">四天计划，打开只看当天</div>
+          </div>
+          <div class="card wide">
+            <div class="hero" id="ivNum">Day 1<span class="unit">/ 4 天</span></div>
+            <p class="hint" id="ivSub"></p>
+            <div class="chips" id="ivChips"></div>
+            <div id="ivBody"></div>
+            <div class="hint" id="ivOut"></div>
+            <details style="margin-top:18px">
+              <summary class="hint" style="cursor:pointer">第 1 天不是今天？点这里改</summary>
+              <div class="row" style="margin-top:10px">
+                <input type="date" id="ivStart">
+                <button class="btn ghost" onclick="Interview.setStart()">设为首日</button>
+              </div>
+              <p class="hint">改完刷新一下，页面会自动对上「今天该看哪天」。</p>
+            </details>
+          </div>
+        </div>
+        <!-- ==== 功能：面试冲刺 END ==== -->
+      </div>
+
     </section>
     <!-- ==== 功能：工作 END ==== -->
-
-    <!-- ==== 功能：面试冲刺 START ==== -->
-    <section class="page" id="page-interview">
-      <div class="page-title">面试冲刺</div>
-      <div class="page-sub">四天计划，打开只看当天</div>
-      <div class="card wide">
-        <div class="hero" id="ivNum">Day 1<span class="unit">/ 4 天</span></div>
-        <p class="hint" id="ivSub"></p>
-        <div class="chips" id="ivChips"></div>
-        <div id="ivBody"></div>
-        <div class="hint" id="ivOut"></div>
-        <details style="margin-top:18px">
-          <summary class="hint" style="cursor:pointer">第 1 天不是今天？点这里改</summary>
-          <div class="row" style="margin-top:10px">
-            <input type="date" id="ivStart">
-            <button class="btn ghost" onclick="Interview.setStart()">设为首日</button>
-          </div>
-          <p class="hint">改完刷新一下，页面会自动对上「今天该看哪天」。</p>
-        </details>
-      </div>
-    </section>
-    <!-- ==== 功能：面试冲刺 END ==== -->
 
     <!-- ==== 功能：记账 START ==== -->
     <section class="page" id="page-money">
@@ -836,8 +891,7 @@ const UI = {
    ═══════════════════════════════════════════════════════════ */
 const App = {
   routes: [
-    { id:'work',      icon:'💼', name:'工作',   onShow: () => Work.render()      },
-    { id:'interview', icon:'🎤', name:'面试',   onShow: () => Interview.render() },
+    { id:'work',      icon:'💼', name:'工作',   onShow: again => Work.render(!again) },
     { id:'money',     icon:'💰', name:'记账',   onShow: () => Money.render()     },
     { id:'weight',    icon:'⚖️', name:'体重',   onShow: () => Weight.render()    },
     { id:'study',     icon:'📚', name:'学习',   onShow: () => Study.render()     },
@@ -849,17 +903,20 @@ const App = {
   ],
 
   go(id){
+    const prev = document.querySelector('.page.on')?.id;
     document.querySelectorAll('.page').forEach(p => p.classList.remove('on'));
     document.getElementById('page-' + id)?.classList.add('on');
     document.querySelectorAll('#nav button').forEach(b =>
       b.classList.toggle('on', b.dataset.id === id));
     document.getElementById('main').scrollTop = 0;
     Store.set('_lastPage', id);
-    this.routes.find(r => r.id === id)?.onShow?.();
+    // 第二个参数 again=true 表示「本来就是这一页」（重绘），功能可以据此不重置内部视图
+    this.routes.find(r => r.id === id)?.onShow?.(prev === 'page-' + id);
   },
 
   init(){
     Store.migrate();          // 旧版数据补齐 id，无感升级
+    if (typeof Work !== 'undefined') Work.migrate();   // 工作页改成项目制，老条目归到「收件箱」
     // 渲染侧边栏
     document.getElementById('nav').innerHTML = this.routes.map(r =>
       `<button data-id="${r.id}" onclick="App.go('${r.id}')">
@@ -874,12 +931,12 @@ const App = {
     if (typeof Sync !== 'undefined') Sync.init();
   },
 
-  /** 重绘当前页。同步拉到新数据后调用 */
+  /** 重绘当前页。同步拉到新数据后调用 —— 传 true 表示「还在这一页」，内部视图不要重置 */
   refresh(){
     const cur = document.querySelector('.page.on');
     if (!cur) return;
     const id = cur.id.replace('page-', '');
-    this.routes.find(r => r.id === id)?.onShow?.();
+    this.routes.find(r => r.id === id)?.onShow?.(true);
   },
 
   // 用户永远不会主动点导出，所以要主动提醒
@@ -1249,42 +1306,240 @@ const Recap = {
 /* ==== 功能：周复盘 END ==== */
 
 /* ==== 功能：工作 START ====
-   要交的 + 要跟进的，两类用 kind 区分。已完成沉底，不然一周后满屏都是勾。 */
+   项目制：一块砖 = 一个项目，点进去再分「跟进」和「交付」两类。
+   数据：workProj 存项目，work 存条目（带 proj / kind / done）。
+   kind：follow = 跟进，deliver = 交付。做完的沉底，不然一周后满屏都是勾。
+   「面试冲刺」是内置的一块砖（假的条目，不在 workProj 里），走 Interview 模块。 */
 const Work = {
-  kind: 'task',
-  setKind(k){
-    this.kind = k;
-    const t = document.getElementById('workKindTask'), f = document.getElementById('workKindFollow');
-    if (t) t.classList.toggle('on', k === 'task');
-    if (f) f.classList.toggle('on', k === 'follow');
+  INBOX: 'pj_inbox',          // 老数据没项目可归时，统一落到这个「收件箱」
+  IV:    '__iv__',            // 内置「面试冲刺」的保留 id，真实项目不会撞
+  view:  'home',
+  cur:   null,
+
+  /* ── 老版本数据迁移：原来的 work 条目没有 proj，kind 是 task / follow ── */
+  migrate(){
+    const raw = Store.get('work', []);
+    if (!Array.isArray(raw) || !raw.length) return 0;
+    let needInbox = false, n = 0;
+    raw.forEach(x => {
+      if (!x || x._d) return;
+      if (!x.proj) { needInbox = true; n++; }
+      else if (x.kind === 'task') n++;
+    });
+    if (!n) return 0;
+    if (needInbox && !Store.list('workProj').some(p => p.id === this.INBOX))
+      Store.upsert('workProj', { id: this.INBOX, name: '收件箱', createdAt: Date.now() });
+    raw.forEach(x => {
+      if (!x || x._d) return;
+      const proj = x.proj || this.INBOX;
+      const kind = x.kind === 'follow' ? 'follow' : 'deliver';
+      if (proj !== x.proj || kind !== x.kind)
+        Store.upsert('work', Object.assign({}, x, { proj, kind }));
+    });
+    return n;
   },
-  render(){
-    this.setKind(this.kind);
-    const box = document.getElementById('workList');
-    if (!box) return;
-    const list = Store.list('work').sort((a, b) =>
-      (a.done ? 1 : 0) - (b.done ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0));
-    box.innerHTML = list.length ? list.map(x => `
-      <div class="item${x.done ? ' done' : ''}" onclick="Work.toggle('${x.id}')">
-        <span class="box">${x.done ? '✓' : ''}</span>
-        <span class="grow">${Util.esc(x.text)}<span class="tag">${x.kind === 'follow' ? '跟进' : '交任务'}</span></span>
-        <button class="del" onclick="event.stopPropagation();Work.del('${x.id}')">✕</button>
-      </div>`).join('') : '<div class="empty">还没有事情，上面加一条</div>';
+
+  /* ── 视图 ── */
+  home(){ this.view = 'home'; this.cur = null; this.render(); },
+  open(id){ this.view = 'proj'; this.cur = id; this.render(); },
+
+  /* ── 项目本身 ── */
+  addProj(){
+    const el = document.getElementById('workProjInput');
+    if (!el) return;
+    const name = (el.value || '').trim();
+    if (!name) return UI.toast('先给项目起个名字');
+    Store.upsert('workProj', { name, createdAt: Date.now() });
+    el.value = '';
+    UI.toast('项目建好了，点它进去加内容');
+    this.render();
   },
-  add(){
-    const el = document.getElementById('workInput');
+
+  renameProj(id){
+    const p = Store.list('workProj').find(x => x.id === id);
+    if (!p) return;
+    const v = prompt('项目名字：', p.name);
+    if (v === null) return;
+    const name = v.trim();
+    if (!name) return UI.toast('名字不能是空的');
+    Store.upsert('workProj', { id, name });
+    this.render();
+  },
+
+  delProj(id){
+    const p = Store.list('workProj').find(x => x.id === id);
+    if (!p) return;
+    const mine = Store.list('work').filter(x => x.proj === id);
+    const tail = mine.length ? '，里面的 ' + mine.length + ' 条记录会一起删掉' : '';
+    if (!confirm('删除项目「' + p.name + '」' + tail + '？\n\n删了就找不回来了。')) return;
+    mine.forEach(x => Store.softDelete('work', x.id));
+    Store.softDelete('workProj', id);
+    UI.toast('项目已删除');
+    this.render();
+  },
+
+  /* ── 条目 ── */
+  add(proj, kind, inputId){
+    const el = document.getElementById(inputId);
+    if (!el) return;
     const text = (el.value || '').trim();
     if (!text) return UI.toast('先写点什么');
-    Store.upsert('work', { text, kind: this.kind, done: false, createdAt: Date.now(), date: Util.today() });
+    Store.upsert('work', { text, proj, kind, done: false, createdAt: Date.now(), date: Util.today() });
     el.value = '';
-    this.render();
+    // 只重画这一列，输入框不动 —— 光标不丢，能连着记好几条
+    const box = document.getElementById('wkList_' + kind);
+    if (box) box.innerHTML = this.rows(proj, kind);
+    this.stat(proj);
   },
+
   toggle(id){
     const it = Store.list('work').find(x => x.id === id);
-    if (it) Store.upsert('work', { id, done: !it.done });
+    if (!it) return;
+    Store.upsert('work', { id, done: !it.done });
     this.render();
   },
-  del(id){ Store.softDelete('work', id); this.render(); }
+
+  del(id){ Store.softDelete('work', id); this.render(); },
+
+  /* ── 渲染：一列条目 ── */
+  rows(proj, kind){
+    const list = Store.list('work')
+      .filter(x => x.proj === proj && x.kind === kind)
+      .sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (b.createdAt || 0) - (a.createdAt || 0));
+    if (!list.length) return '<div class="empty">还是空的，上面加一条</div>';
+    return list.map(x => `
+      <div class="item${x.done ? ' done' : ''}" onclick="Work.toggle('${x.id}')">
+        <span class="box">${x.done ? '✓' : ''}</span>
+        <span class="grow">${Util.esc(x.text)}</span>
+        <button class="del" onclick="event.stopPropagation();Work.del('${x.id}')">✕</button>
+      </div>`).join('');
+  },
+
+  /** 跟进 / 交付 的标题、提示语和 emoji */
+  META: {
+    follow:  { ico:'🔁', name:'跟进', ph:'要跟的事，比如「等对方回话」' },
+    deliver: { ico:'📦', name:'交付', ph:'要交出去的东西，做完打勾' }
+  },
+
+  group(proj, kind){
+    const m = this.META[kind];
+    return `<div class="card">
+      <h2>${m.ico} ${m.name}</h2>
+      <div class="row">
+        <input type="text" id="wkIn_${kind}" placeholder="${m.ph}">
+        <button class="btn" onclick="Work.add('${proj}','${kind}','wkIn_${kind}')">加</button>
+      </div>
+      <div id="wkList_${kind}" style="margin-top:8px">${this.rows(proj, kind)}</div>
+    </div>`;
+  },
+
+  stat(proj){
+    const el = document.getElementById('wkStat');
+    if (!el) return;
+    const all = Store.list('work').filter(x => x.proj === proj);
+    if (!all.length) { el.textContent = '还没内容，下面加第一条'; return; }
+    const done = all.filter(x => x.done).length;
+    el.textContent = '共 ' + all.length + ' 条 · 已完成 ' + done + ' 条 · 还剩 ' + (all.length - done) + ' 条';
+  },
+
+  renderProj(){
+    const box = document.getElementById('workProj');
+    const p = Store.list('workProj').find(x => x.id === this.cur);
+    if (!box) return;
+    if (!p) { this.home(); return; }          // 项目被删了（或在别的设备删了），退回项目墙
+    box.innerHTML = `
+      <div class="wkHead">
+        <div class="wkBar">
+          <button class="btn ghost" onclick="Work.home()">← 工作</button>
+          <span class="sp"></span>
+          <button class="btn ghost" onclick="Work.renameProj('${p.id}')">重命名</button>
+          <button class="btn ghost" onclick="Work.delProj('${p.id}')">删除</button>
+        </div>
+        <div class="page-title" style="margin-top:14px">${Util.esc(p.name)}</div>
+        <div class="page-sub" id="wkStat"></div>
+      </div>
+      ${this.group(p.id, 'follow')}
+      ${this.group(p.id, 'deliver')}`;
+    this.stat(p.id);
+  },
+
+  /** 一块砖要显示的数字：总数 / 未完成 / 完成度 */
+  brief(proj){
+    const mine = Store.list('work').filter(x => x.proj === proj);
+    const left = mine.filter(x => !x.done).length;
+    const done = mine.length - left;
+    return { n: mine.length, left, done, pct: mine.length ? Math.round(done / mine.length * 100) : 0 };
+  },
+
+  renderHome(){
+    const grid = document.getElementById('workProjGrid');
+    if (!grid) return;
+
+    // 内置砖：面试冲刺
+    const day  = Interview.todayDay();
+    const ids  = Interview.ids(day);
+    const done = ids.filter(i => Interview.isDone(i)).length;
+    const pct  = ids.length ? Math.round(done / ids.length * 100) : 0;
+    const iv = `<div class="pj" onclick="Work.open('${this.IV}')">
+        <div class="pjTop">
+          <span class="pjIco">🎤</span>
+          <span class="pjName">面试冲刺</span>
+          <span class="tag">内置</span>
+        </div>
+        <div class="pjMeta">
+          <span>Day <b>${day}</b> / 4</span>
+          <span>今天 <b>${done}/${ids.length}</b></span>
+        </div>
+        <div class="pjBar"><i style="width:${pct}%"></i></div>
+      </div>`;
+
+    const mine = Store.list('workProj')
+      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+      .map(p => {
+        const b = this.brief(p.id);
+        return `<div class="pj" onclick="Work.open('${p.id}')">
+          <div class="pjTop">
+            <span class="pjIco">📁</span>
+            <span class="pjName">${Util.esc(p.name)}</span>
+            <button class="pjDel" onclick="event.stopPropagation();Work.delProj('${p.id}')">✕</button>
+          </div>
+          <div class="pjMeta">
+            <span>跟进 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'follow' && !x.done).length}</b></span>
+            <span>交付 <b>${Store.list('work').filter(x => x.proj === p.id && x.kind === 'deliver' && !x.done).length}</b></span>
+            <span>${b.n ? '完成 <b>' + b.done + '/' + b.n + '</b>' : '还没内容'}</span>
+          </div>
+          <div class="pjBar"><i style="width:${b.pct}%"></i></div>
+        </div>`;
+      }).join('');
+
+    const add = `<div class="pj pjAdd">
+        <input type="text" id="workProjInput" placeholder="＋ 新建项目">
+        <button class="btn" onclick="Work.addProj()">建项目</button>
+      </div>`;
+
+    grid.innerHTML = iv + mine + add;
+  },
+
+  /** reset=true 时回到项目墙。侧边栏点「工作」会传 true；同步重绘不传，原地不动 */
+  render(reset){
+    this.migrate();
+    if (reset) { this.view = 'home'; this.cur = null; }
+    const home = document.getElementById('workHome');
+    const sub  = document.getElementById('workSub');
+    const iv   = document.getElementById('workIv');
+    if (!home || !sub) return;
+
+    const isHome = this.view === 'home';
+    home.classList.toggle('hide', !isHome);
+    sub.classList.toggle('hide', isHome);
+    if (isHome) { this.renderHome(); return; }
+
+    const isIV = this.cur === this.IV;
+    if (iv) iv.classList.toggle('hide', !isIV);
+    const box = document.getElementById('workProj');
+    if (box) box.innerHTML = '';
+    if (isIV) Interview.render(); else this.renderProj();
+  }
 };
 /* ==== 功能：工作 END ==== */
 
