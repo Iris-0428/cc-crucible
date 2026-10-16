@@ -4,3 +4,6 @@ node_modules/
 Thumbs.db
 *.log
 .edgeone/
+
+# 本地桌面快捷方式用的图标，不用部署
+icon.ico
