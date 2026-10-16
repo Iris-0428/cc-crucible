@@ -1,0 +1,6 @@
+# 部署时不需要进仓库的东西
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.edgeone/
