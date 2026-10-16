@@ -538,6 +538,8 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
         <div id="syncOff">
           <p class="hint" style="margin-top:0">
             手机和电脑各记各的，靠一个<b>你自己的私有 GitHub 仓库</b>对齐。<br>
+            ⚠️ <b>Safari 和「添加到主屏」的图标，是两个独立容器</b>——本地数据各存一份。
+            两边都开启同步后，才会通过云端合并到一起。<br>
             数据在<b>你的设备</b>和<b>你的私有仓库</b>各存一份，本地那份始终在，断网照样能记。<br>
             仓库那份是明文的（只是 base64 编码，不是加密）——只有拿着你令牌的人能读。<br>
             令牌只存在这台设备的浏览器里，<b>不进备份、不上传</b>。
@@ -552,16 +554,19 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
             <button class="btn" onclick="Settings.enableSync()">开启同步</button>
             <button class="btn ghost" onclick="Store.exportFile()">先导出备份</button>
           </div>
-          <p class="hint">建议先导出一份备份再开——本地这份永远是你的底。</p>
+          <p class="hint">填过一次就记住了：连不上也不会被清空，重试只需再点一下「开启同步」。</p>
         </div>
         <div id="syncOn" style="display:none">
           <p class="hint" style="margin-top:0">数据仓库：<b id="syncWho" class="mono"></b><br>上次同步：<span id="syncTime"></span></p>
+          <p class="hint" id="syncErr" style="color:#c0392b;margin-top:6px"></p>
           <div class="row" style="margin-top:14px">
             <button class="btn" onclick="Sync.pull(true)">立即同步</button>
+            <button class="btn ghost" onclick="Settings.editSync()">改仓库 / 令牌</button>
             <button class="btn ghost" onclick="Sync.disable()">关闭同步</button>
           </div>
           <p class="hint">
-            打开工作台时会自动拉一次，切回前台也拉一次。刚在别的设备改完想马上看到，就点「立即同步」。
+            打开工作台时会自动拉一次，切回前台也拉一次。刚在别的设备改完想马上看到，就点「立即同步」。<br>
+            连不上<b>不会清掉你填的内容</b>，会自己重试（15 秒 / 1 分钟 / 5 分钟各一次），不用重新输入。
           </p>
         </div>
       </div>
@@ -998,12 +1003,27 @@ const Settings = {
     const on = Sync.on();
     document.getElementById('syncOff').style.display = on ? 'none' : 'block';
     document.getElementById('syncOn').style.display  = on ? 'block' : 'none';
-    if (on) {
-      document.getElementById('syncWho').textContent = Sync.cfg().repo;
-      const t = Store.get('_syncAt');
-      document.getElementById('syncTime').textContent =
-        t ? new Date(t).toLocaleString('zh-CN') : '还没同步过';
-    }
+
+    // 填过的内容带出来：万一连不上被退回来，重试不用重新输入
+    const repoEl = document.getElementById('syncRepo'), tokEl = document.getElementById('syncToken');
+    if (repoEl && !repoEl.value) repoEl.value = Sync.cfg().repo || '';
+    if (tokEl && !tokEl.value) tokEl.value = Sync.token() || '';
+
+    document.getElementById('syncWho').textContent = Sync.cfg().repo || '';
+    const t = Store.get('_syncAt');
+    document.getElementById('syncTime').textContent =
+      t ? new Date(t).toLocaleString('zh-CN') : '还没同步过';
+    const err = Store.get('_syncErr');
+    const errEl = document.getElementById('syncErr');
+    if (errEl) errEl.textContent = err ? '上次没连上：' + err + '（会自动重试，不急）' : '';
+  },
+
+  /** 已开启时想改仓库或令牌：先把同步关掉，但把填过的内容留着 */
+  editSync(){
+    Store.set('_sync', { on:false, repo: Sync.cfg().repo });
+    Store.set('_syncErr', '');
+    this.renderSync();
+    UI.toast('改完点「开启同步」重新连');
   },
 
   saveKeys(){
@@ -1042,7 +1062,10 @@ const Sync = {
   DEBOUNCE: 4000,
   FILE: 'data.json',        // 数据在仓库里的文件名
   MAX: 900 * 1024,          // Contents API 单文件约 1MB，留点余量
+  RETRY: [15000, 60000, 300000],   // 连不上时的重试间隔：15 秒 → 1 分钟 → 5 分钟，之后停手
   _timer: null,
+  _rtimer: null,
+  _try: 0,
   _busy: false,
 
   cfg(){ return Store.get('_sync', { on:false, repo:'' }); },
@@ -1115,7 +1138,10 @@ const Sync = {
     throw new Error('同步冲突了，等几秒再点一次「立即同步」');
   },
 
-  /** 开启同步：填「所有者/仓库名」+ 访问令牌 */
+  /** 开启同步：填「所有者/仓库名」+ 访问令牌
+      ── 关键：连不上时**绝不**清掉用户刚填的内容 ──
+      凭据先落盘，失败只标「未同步」并安排后台重试。
+      （老版本失败即清空，用户每次进来都被要求重填，那是这里的老 bug） */
   async enable(repo, token){
     repo = (repo || '').trim()
       .replace(/^https?:\/\/github\.com\//i, '')
@@ -1125,24 +1151,51 @@ const Sync = {
     if (!/^[\w.-]+\/[\w.-]+$/.test(repo))
       return UI.toast('仓库要填「所有者/仓库名」，例如 Iris-0428/cc-crucible-data');
     if (token.length < 20) return UI.toast('令牌不完整，请复制全部内容');
+
     Store.set('_sync', { on:true, repo });
     Store.setSecret('syncToken', token);
+    Store.set('_syncErr', '');
     try {
       await this.roundtrip();
-      Store.set('_syncAt', Date.now());
+      this.ok();
       UI.toast('同步已开启，数据已合并');
       setTimeout(() => location.reload(), 900);
     } catch(e){
-      Store.set('_sync', { on:false, repo:'' });
-      Store.setSecret('syncToken', '');
-      UI.toast(e.message);
+      // 配置留着，只是这次没连上 —— 网络好了会自动重试，不用重新输入
+      Store.set('_syncErr', e.message);
+      this.status('未同步');
+      Settings.renderSync();
+      UI.toast('配置已记住，这次没连上：' + e.message + '（会自动重试）');
+      this.retry();
     }
   },
 
+  /** 连上了一次：清掉错误、重试计数归零 */
+  ok(){
+    this._try = 0;
+    clearTimeout(this._rtimer);
+    Store.set('_syncAt', Date.now());
+    Store.set('_syncErr', '');
+    this.status('已同步');
+  },
+
+  /** 失败后的有限重试：15 秒 → 1 分钟 → 5 分钟，之后停手，
+      等下次打开工作台或切回前台时再试（不轮询，不给接口刷量） */
+  retry(){
+    if (!this.on()) return;
+    clearTimeout(this._rtimer);
+    const d = this.RETRY[this._try];
+    if (d === undefined) return;
+    this._try++;
+    this._rtimer = setTimeout(() => { this.pull(); this.retry(); }, d);
+  },
+
   disable(){
-    if (!confirm('关闭同步？本地数据一条不会少，只是不再和云端对齐。')) return;
+    if (!confirm('关闭同步？本地数据一条不会少，只是不再和云端对齐。\n\n（仓库名和令牌会被清掉，下次开启要重新填）')) return;
+    clearTimeout(this._rtimer);
     Store.set('_sync', { on:false, repo:'' });
     Store.setSecret('syncToken', '');
+    Store.set('_syncErr', '');
     UI.toast('已关闭同步');
     Settings.render();
   },
@@ -1155,13 +1208,15 @@ const Sync = {
     try {
       const { data } = await this.read();
       const n = Store.mergeRemote(data || {});
-      Store.set('_syncAt', Date.now());
-      this.status('已同步');
+      this.ok();
       if (n) { if (loud) UI.toast('拉到 ' + n + ' 处更新'); App.refresh(); }
       else if (loud) UI.toast('已是最新');
     } catch(e){
+      Store.set('_syncErr', e.message);
       this.status('未同步');
+      Settings.renderSync();
       if (loud) UI.toast(e.message);
+      this.retry();                       // 网络好了自己再试，不用用户管
     } finally { this._busy = false; }
   },
 
@@ -1178,11 +1233,13 @@ const Sync = {
     this.status('同步中');
     try {
       await this.roundtrip();
-      Store.set('_syncAt', Date.now());
-      this.status('已同步');
+      this.ok();
     } catch(e){
+      Store.set('_syncErr', e.message);
       this.status('未同步');
+      Settings.renderSync();
       console.warn('同步失败，本地数据不受影响：', e.message);
+      this.retry();
     } finally { this._busy = false; }
   },
 
