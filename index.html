@@ -445,33 +445,31 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
         <h2>🔄 双端同步 <span class="hint" id="syncState" style="margin:0 0 0 auto;font-size:var(--fs-meta)"></span></h2>
         <div id="syncOff">
           <p class="hint" style="margin-top:0">
-            开启后手机和电脑登同一个账号，记的东西自动对齐。<br>
-            <b>数据会在你的设备和云端各存一份</b>，本地那份始终在，断网照样能记。<br>
-            云端那份是明文的——只有知道你密码的人能读，但平台运维理论上能看到。<br>
-            <b>密码忘了就进不去了，没有找回功能。</b>
+            手机和电脑各记各的，靠一个<b>你自己的私有 GitHub 仓库</b>对齐。<br>
+            数据在<b>你的设备</b>和<b>你的私有仓库</b>各存一份，本地那份始终在，断网照样能记。<br>
+            仓库那份是明文的（只是 base64 编码，不是加密）——只有拿着你令牌的人能读。<br>
+            令牌只存在这台设备的浏览器里，<b>不进备份、不上传</b>。
           </p>
           <div style="margin-top:14px">
-            <input type="text" id="syncUser" placeholder="用户名（3-32 个字符，只用来定位你的数据）" autocomplete="username">
+            <input type="text" id="syncRepo" placeholder="数据仓库：所有者/仓库名" autocomplete="off">
           </div>
           <div style="margin-top:10px">
-            <input type="password" id="syncPass" placeholder="密码（至少 8 位）" autocomplete="new-password">
+            <input type="password" id="syncToken" placeholder="访问令牌（需勾选该仓库的 Contents 读写）" autocomplete="off">
           </div>
           <div class="row" style="margin-top:14px">
             <button class="btn" onclick="Settings.enableSync()">开启同步</button>
             <button class="btn ghost" onclick="Store.exportFile()">先导出备份</button>
           </div>
-          <p class="hint">建议先导出一份备份再开——万一以后忘了密码，本地这份还在。</p>
+          <p class="hint">建议先导出一份备份再开——本地这份永远是你的底。</p>
         </div>
         <div id="syncOn" style="display:none">
-          <p class="hint" style="margin-top:0">账号：<b id="syncWho" class="mono"></b><br>上次同步：<span id="syncTime"></span></p>
+          <p class="hint" style="margin-top:0">数据仓库：<b id="syncWho" class="mono"></b><br>上次同步：<span id="syncTime"></span></p>
           <div class="row" style="margin-top:14px">
             <button class="btn" onclick="Sync.pull(true)">立即同步</button>
-            <button class="btn ghost" onclick="Settings.changePass()">改密码</button>
             <button class="btn ghost" onclick="Sync.disable()">关闭同步</button>
           </div>
           <p class="hint">
-            刚在另一台设备改的东西，这边最多等一分钟才看得到（云端缓存机制），
-            等不及就点「立即同步」。
+            打开工作台时会自动拉一次，切回前台也拉一次。刚在别的设备改完想马上看到，就点「立即同步」。
           </p>
         </div>
       </div>
@@ -887,13 +885,8 @@ const Settings = {
   },
 
   enableSync(){
-    Sync.enable(document.getElementById('syncUser').value,
-                document.getElementById('syncPass').value);
-  },
-
-  changePass(){
-    const np = prompt('输入新密码（至少 8 位）');
-    if (np) Sync.changePass(np);
+    Sync.enable(document.getElementById('syncRepo').value,
+                document.getElementById('syncToken').value);
   },
 
   renderSync(){
@@ -903,7 +896,7 @@ const Settings = {
     document.getElementById('syncOff').style.display = on ? 'none' : 'block';
     document.getElementById('syncOn').style.display  = on ? 'block' : 'none';
     if (on) {
-      document.getElementById('syncWho').textContent = Sync.cfg().user;
+      document.getElementById('syncWho').textContent = Sync.cfg().repo;
       const t = Store.get('_syncAt');
       document.getElementById('syncTime').textContent =
         t ? new Date(t).toLocaleString('zh-CN') : '还没同步过';
@@ -930,69 +923,125 @@ const Settings = {
 /* ==== 双端同步 START ====
    用户选「只在一台设备用」时，把这整段（以及设置页里的 syncCard）删掉。
 
-   三条设计红线，破了就会烧掉免费额度或者丢数据：
+   后端 = 用户自己的私有 GitHub 仓库（配合 GitHub Pages 上的纯静态前端）。
+   没有服务器，同步靠 GitHub 的 Contents API：两端各自读写仓库里的 data.json，
+   读回来按条合并，再把合并结果写回去。
+
+   三条设计红线，破了就会丢数据或者产生额外开销：
    1. 本地优先 —— 写入永远先落 localStorage，界面立刻变。云端是异步的。
-      断网、KV 抽风、额度用完，工作台照常能用，只是不同步。
+      断网、GitHub 抽风、令牌过期，工作台照常能用，只是不同步。
    2. 绝不轮询 —— 只在「打开时 / 切回前台 / 手动刷新」拉取。
-      每 30 秒轮一次的话，一台设备一个月就是 8 万多次函数调用。
    3. 推送防抖 —— 改动后等 4 秒再推，把连续操作合并成一次请求。
-      勾 10 个待办应该是 1 次调用，不是 10 次。 */
+
+   安全：令牌只存在浏览器本地（bysdash$secret:），不进备份、不上传。
+   数据放在私有仓库里，只有拿着该仓库令牌的人能读。 */
 const Sync = {
   DEBOUNCE: 4000,
+  FILE: 'data.json',        // 数据在仓库里的文件名
+  MAX: 900 * 1024,          // Contents API 单文件约 1MB，留点余量
   _timer: null,
   _busy: false,
 
-  cfg(){ return Store.get('_sync', { on:false, user:'' }); },
+  cfg(){ return Store.get('_sync', { on:false, repo:'' }); },
   on(){ return !!this.cfg().on; },
-  pass(){ return Store.getSecret('syncPass') || ''; },
+  token(){ return Store.getSecret('syncToken') || ''; },
 
-  async call(action, extra = {}){
-    const c = this.cfg();
-    const r = await fetch('/api/sync', {
-      method:'POST',
-      headers:{ 'content-type':'application/json' },
-      body: JSON.stringify(Object.assign({ action, user:c.user, pass:this.pass() }, extra))
-    });
-    const j = await r.json().catch(() => ({ error:'返回格式不对' }));
-    if (!r.ok) throw new Error(j.error || ('请求失败 ' + r.status));
-    return j;
+  /* ── GitHub Contents API ── */
+  _api(){ return 'https://api.github.com/repos/' + this.cfg().repo + '/contents/' + this.FILE; },
+  _h(){
+    return {
+      'authorization': 'Bearer ' + this.token(),
+      'accept': 'application/vnd.github+json',
+      'x-github-api-version': '2022-11-28'
+    };
+  },
+  _b64(str){
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (const b of bytes) bin += String.fromCharCode(b);
+    return btoa(bin);
+  },
+  _unb64(b64){
+    const bin = atob(String(b64).replace(/\s/g, ''));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  },
+  async _err(r){
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) return '令牌无效或已被撤销，请重新生成';
+    if (r.status === 403) return '令牌权限不够：要对这个仓库的 Contents 读写权限';
+    if (r.status === 404) return '找不到仓库：检查「所有者/仓库名」，以及令牌有没有勾上这个仓库';
+    return j.message || ('请求失败 ' + r.status);
   },
 
-  /** 开启同步：首次会把这个用户名注册下来 */
-  async enable(user, pass){
-    user = (user || '').trim().toLowerCase();
-    if (user.length < 3) return UI.toast('用户名至少 3 个字符');
-    if ((pass || '').length < 8) return UI.toast('密码至少 8 位');
-    Store.set('_sync', { on:true, user });
-    Store.setSecret('syncPass', pass);
+  /** 读云端整包。仓库里还没文件时 data 为 null */
+  async read(){
+    const r = await fetch(this._api(), { headers: this._h(), cache:'no-store' });
+    if (r.status === 404) return { data:null, sha:null };
+    if (!r.ok) throw new Error(await this._err(r));
+    const j = await r.json();
+    let data = null;
+    try { data = JSON.parse(this._unb64(j.content || '')); } catch {}
+    return { data, sha: j.sha };
+  },
+
+  /** 写云端。别人刚推过（sha 对不上）时返回 false，交给调用方重试 */
+  async write(data, sha){
+    const text = JSON.stringify(data);
+    if (text.length > this.MAX) throw new Error('数据超过 900KB，装不下了');
+    const body = { message: '同步 ' + new Date().toISOString(), content: this._b64(text) };
+    if (sha) body.sha = sha;
+    const r = await fetch(this._api(), {
+      method:'PUT',
+      headers: Object.assign({ 'content-type':'application/json' }, this._h()),
+      body: JSON.stringify(body)
+    });
+    if (r.status === 409 || r.status === 422) return false;   // 冲突：另一端刚推过
+    if (!r.ok) throw new Error(await this._err(r));
+    return true;
+  },
+
+  /** 读 → 合并进本地 → 把合并结果写回。冲突自动重来一次 */
+  async roundtrip(){
+    for (let i = 0; i < 2; i++){
+      const { data, sha } = await this.read();
+      if (data) Store.mergeRemote(data);
+      if (await this.write(Store.dump(), sha)) return;
+    }
+    throw new Error('同步冲突了，等几秒再点一次「立即同步」');
+  },
+
+  /** 开启同步：填「所有者/仓库名」+ 访问令牌 */
+  async enable(repo, token){
+    repo = (repo || '').trim()
+      .replace(/^https?:\/\/github\.com\//i, '')
+      .replace(/\.git$/i, '')
+      .replace(/\/+$/, '');
+    token = (token || '').trim();
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo))
+      return UI.toast('仓库要填「所有者/仓库名」，例如 Iris-0428/cc-crucible-data');
+    if (token.length < 20) return UI.toast('令牌不完整，请复制全部内容');
+    Store.set('_sync', { on:true, repo });
+    Store.setSecret('syncToken', token);
     try {
-      const j = await this.call('push', { data: Store.dump() });   // push 兼注册
-      if (j.data) Store.mergeRemote(j.data);
+      await this.roundtrip();
       Store.set('_syncAt', Date.now());
-      UI.toast(j.created ? '同步已开启' : '已连上，数据已合并');
+      UI.toast('同步已开启，数据已合并');
       setTimeout(() => location.reload(), 900);
     } catch(e){
-      Store.set('_sync', { on:false, user:'' });
-      Store.setSecret('syncPass', '');
+      Store.set('_sync', { on:false, repo:'' });
+      Store.setSecret('syncToken', '');
       UI.toast(e.message);
     }
   },
 
   disable(){
     if (!confirm('关闭同步？本地数据一条不会少，只是不再和云端对齐。')) return;
-    Store.set('_sync', { on:false, user:'' });
-    Store.setSecret('syncPass', '');
+    Store.set('_sync', { on:false, repo:'' });
+    Store.setSecret('syncToken', '');
     UI.toast('已关闭同步');
     Settings.render();
-  },
-
-  async changePass(np){
-    if ((np || '').length < 8) return UI.toast('新密码至少 8 位');
-    try {
-      await this.call('chpass', { newPass: np });
-      Store.setSecret('syncPass', np);
-      UI.toast('密码已改');
-    } catch(e){ UI.toast(e.message); }
   },
 
   /** 拉取并合并。失败一律静默降级——本地数据才是主的 */
@@ -1001,15 +1050,15 @@ const Sync = {
     this._busy = true;
     this.status('同步中');
     try {
-      const j = await this.call('pull');
-      const n = Store.mergeRemote(j.data || {});
+      const { data } = await this.read();
+      const n = Store.mergeRemote(data || {});
       Store.set('_syncAt', Date.now());
       this.status('已同步');
       if (n) { if (loud) UI.toast('拉到 ' + n + ' 处更新'); App.refresh(); }
       else if (loud) UI.toast('已是最新');
     } catch(e){
       this.status('未同步');
-      if (loud) UI.toast(e.message.includes('NO_ACCOUNT') ? '云端还没有数据' : e.message);
+      if (loud) UI.toast(e.message);
     } finally { this._busy = false; }
   },
 
@@ -1025,8 +1074,7 @@ const Sync = {
     this._busy = true;
     this.status('同步中');
     try {
-      const j = await this.call('push', { data: Store.dump() });
-      if (j.data) Store.mergeRemote(j.data);
+      await this.roundtrip();
       Store.set('_syncAt', Date.now());
       this.status('已同步');
     } catch(e){
