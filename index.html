@@ -577,13 +577,6 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
         <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
         <p class="hint">清空前请确认已经导出过备份，这个操作无法撤销。</p>
       </div>
-
-      <div class="card">
-        <p class="hint" style="margin:0;text-align:center">
-          CC的坩埚<br>
-          <span style="opacity:.6">由 不一书个人工作台生成器 生成</span>
-        </p>
-      </div>
     </section>
     <!-- ==== 功能：设置 END ==== -->
 
@@ -1371,9 +1364,7 @@ const Recap = {
 
     g.fillStyle = v('--text-dim') || '#999';
     g.font = font(26);
-    g.fillText('CC的坩埚', pad + 56, 1010);
-    g.font = font(22);
-    g.fillText('由 不一书个人工作台生成器 生成', pad + 56, 1046);
+    g.fillText('CC的坩埚', pad + 56, 1030);
 
     // 导出。iOS 上 download 属性时常无效，所以失败就退回新窗口打开让用户长按保存
     cv.toBlob(b => {
